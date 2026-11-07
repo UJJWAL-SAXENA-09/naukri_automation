@@ -10,6 +10,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const { browserLaunchOptions } = require("./browser-options");
 
 const QUICK = process.argv.includes("--quick");
 const results = [];
@@ -253,15 +254,14 @@ async function checkSessions() {
     }
     let ctx;
     try {
-      ctx = await chromium.launchPersistentContext(full, {
-        channel: "chrome",
+      ctx = await chromium.launchPersistentContext(full, browserLaunchOptions({
         headless: false,
         viewport: { width: 1200, height: 800 },
         args: [
           "--disable-blink-features=AutomationControlled",
           "--window-position=0,0",
         ],
-      });
+      }));
     } catch (e) {
       warn(
         label,

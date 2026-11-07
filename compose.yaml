@@ -1,0 +1,38 @@
+services:
+  naukri-refresh:
+    build: .
+    image: naukri-automation:local
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: Asia/Kolkata
+      SCHEDULE_SECONDS: "3600"
+      BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
+      CONTAINERIZED_BROWSER: "1"
+    volumes:
+      # Never commit these directories. They contain browser cookies, logs, and CV data.
+      - ./runtime:/state
+      - ./private:/private:ro
+    command: ["scheduler"]
+
+  # Start only when a saved Naukri session has expired. The host port is bound to
+  # localhost, so it is reachable only through an SSH tunnel—not the public internet.
+  naukri-login:
+    profiles: ["login"]
+    build: .
+    image: naukri-automation:local
+    init: true
+    restart: "no"
+    env_file: .env
+    environment:
+      TZ: Asia/Kolkata
+      LOGIN_TIMEOUT_MS: "900000"
+      BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
+      CONTAINERIZED_BROWSER: "1"
+    volumes:
+      - ./runtime:/state
+      - ./private:/private:ro
+    ports:
+      - "127.0.0.1:6080:6080"
+    command: ["interactive-login"]

@@ -14,6 +14,7 @@
  */
 const { chromium } = require("playwright-core");
 const path = require("path");
+const { browserLaunchOptions } = require("./browser-options");
 
 const PROFILE_DIR = path.join(__dirname, ".wellfound-chrome-profile");
 const CHECK_ONLY = process.argv.includes("--check");
@@ -35,15 +36,14 @@ async function isLoggedIn(page) {
 }
 
 (async () => {
-  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
-    channel: "chrome",
+  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, browserLaunchOptions({
     headless: false,
     viewport: { width: 1280, height: 900 },
     args: [
       "--disable-blink-features=AutomationControlled",
       "--window-position=0,0",
     ],
-  });
+  }));
   const page = ctx.pages()[0] || (await ctx.newPage());
 
   try {

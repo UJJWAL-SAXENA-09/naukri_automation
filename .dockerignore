@@ -1,0 +1,12 @@
+.git
+node_modules
+.env
+runtime
+private
+*.log
+*.pdf
+*.png
+applications*.csv
+apply-state-*.json
+.*-chrome-profile
+.*-apply-profile

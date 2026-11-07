@@ -14,6 +14,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+const { browserLaunchOptions } = require('./browser-options');
 const { CV, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
 const { minimizeBrowserWindows, hideBrowserWindows, SHOW_FLAG } = require('./window-utils');
 const { applyExternal } = require('./external-apply'); // "Apply on company site" jobs, driven from Node
@@ -204,8 +205,7 @@ function buildInjection() {
     log(`Daily cap of ${DAILY_CAP} applications already reached (${dayState.count} today) — exiting.`);
     return;
   }
-  const launch = () => chromium.launchPersistentContext(path.join(__dirname, site.profile), {
-    channel: 'chrome',
+  const launch = () => chromium.launchPersistentContext(path.join(__dirname, site.profile), browserLaunchOptions({
     headless: false, // bot checks block headless; headed + minimised instead (same trick as naukri refresh)
     viewport: { width: 1280, height: 900 },
     args: [
@@ -222,7 +222,7 @@ function buildInjection() {
         ? '--window-position=0,0'
         : '--window-position=-32000,-32000',
     ],
-  });
+  }));
 
   // The window used to be parked at -32000,-32000. That hid it, but its taskbar
   // button then "restored" it to coordinates no monitor covers, so the run could

@@ -15,6 +15,7 @@
 const { chromium } = require("playwright-core");
 const path = require("path");
 const fs = require("fs");
+const { browserLaunchOptions } = require("./browser-options");
 const { naukriProfileUrl, resumePath } = require("./config");
 const { nextHeadline, uploadedToday } = require("./naukri-helpers");
 const {
@@ -61,7 +62,8 @@ async function manualLogin(page) {
 
   // The browser remains visible in login mode. Complete Google/Naukri login yourself;
   // this script neither reads nor enters a password.
-  const deadline = Date.now() + 5 * 60 * 1000;
+  const loginTimeoutMs = Number(process.env.LOGIN_TIMEOUT_MS || 5 * 60 * 1000);
+  const deadline = Date.now() + loginTimeoutMs;
   while (Date.now() < deadline) {
     try {
       if (onProfile(new URL(page.url()))) {
@@ -72,13 +74,12 @@ async function manualLogin(page) {
     await page.waitForTimeout(2000);
   }
   throw new Error(
-    "Manual Google login did not complete within 5 minutes. Run the login command again and finish it in the visible window.",
+    "Manual Google login did not complete before the timeout. Run the login command again and finish it in the visible window.",
   );
 }
 
 (async () => {
-  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
-    channel: "chrome",
+  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, browserLaunchOptions({
     headless: false, // naukri's Akamai bot-check blocks headless; minimised headed instead
     viewport: { width: 1280, height: 850 },
     // --window-position pins an on-screen origin; the profile still carries the old
@@ -94,7 +95,7 @@ async function manualLogin(page) {
         ? "--window-position=0,0"
         : "--window-position=-32000,-32000",
     ],
-  });
+  }));
   // Hidden rather than parked at -32000,-32000: off-screen made the taskbar button
   // useless, because "restoring" put the window back where no monitor reaches.
   // Pass --show to keep it on screen, --minimize to leave it in the taskbar.
