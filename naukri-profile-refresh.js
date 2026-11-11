@@ -127,6 +127,7 @@ async function manualLogin(page) {
     ctx.once("close", () => clearInterval(hideTimer));
   }
   let page = ctx.pages()[0] || (await ctx.newPage());
+  let sessionAuthenticated = false;
 
   try {
     await page.goto(PROFILE_URL, {
@@ -150,6 +151,7 @@ async function manualLogin(page) {
       )
       .then(() => true)
       .catch(() => false);
+    sessionAuthenticated = sessionReady;
 
     if (!sessionReady) {
       page = await manualLogin(page);
@@ -271,7 +273,7 @@ async function manualLogin(page) {
     );
     process.exitCode = 1;
   } finally {
-    if (process.env.BROWSER_SESSION_SNAPSHOT === "1") {
+    if (sessionAuthenticated && process.env.BROWSER_SESSION_SNAPSHOT === "1") {
       await saveSessionSnapshot(ctx, "refresh").catch(() => {});
     }
     await ctx.close();

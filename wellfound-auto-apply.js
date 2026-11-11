@@ -52,10 +52,13 @@
 
   // ======================= CV DATA (from .env via the runner) =======================
   const CV = __CFG.CV || {
-    name: '', email: '', phone: '', location: '', currentRole: '', company: '', education: '',
+    name: '', email: '', phone: '', location: '', city: '', state: '', country: '', postalCode: '',
+    nationality: '', citizenship: '', currentRole: '', company: '', education: '', degree: '', university: '',
+    graduationYear: '', cgpa: '', cgpaScale: '10', tenthScore: '', tenthYear: '', twelfthScore: '', twelfthYear: '',
     yearsOfExperience: '', skills: '', highlights: ['', '', '', '', ''], noticePeriod: '',
     currentCTC: '', expectedCTC: '', currentSalary: '', expectedSalary: '', dob: '', gender: '',
-    workAuth: '', github: '', linkedin: '', portfolio: '', links: '', remoteOk: '', relocate: '', startDate: '',
+    workAuth: '', sponsorship: '', maritalStatus: '', disabilityStatus: '', criminalRecord: '', backgroundCheck: '',
+    shiftPreference: '', travelPreference: '', github: '', linkedin: '', portfolio: '', links: '', remoteOk: '', relocate: '', startDate: '',
   };
 
   // ============== QUESTION → ANSWER BANK ==============
@@ -66,11 +69,29 @@
       `I have ${CV.yearsOfExperience}. Hands-on with ${CV.skills.split(',').slice(0, 8).join(',')} and more.`],
     [/notice period|when can you (start|join)|start date|joining/i,
       `${CV.startDate}`],
+    [/\b(cgpa|gpa)\b|grade point/i, CV.cgpa],
+    [/graduation (year|date)|year of (graduation|passing)|passing year/i, CV.graduationYear],
+    [/(10th|class x|secondary).*(score|marks|percentage|cgpa)/i, CV.tenthScore],
+    [/(12th|class xii|higher secondary).*(score|marks|percentage|cgpa)/i, CV.twelfthScore],
+    [/postal|zip|pin\s*code/i, CV.postalCode],
+    [/nationality/i, CV.nationality],
+    [/citizenship/i, CV.citizenship],
+    [/sponsor(ship)?/i, CV.sponsorship],
+    [/country of residence|current country|which country|\bcountry\b/i, CV.country],
+    [/\bstate\b/i, CV.state],
     [/current .{0,15}(ctc|salary|compensation)/i, CV.currentSalary],
     [/(expected|desired) .{0,15}(ctc|salary|compensation|pay)|salary expectation/i, CV.expectedSalary],
     [/remote|work from home|wfh/i, CV.remoteOk],
     [/reloc|move to|shift to|based out of|work from (our )?office|on-?site/i, CV.relocate],
     [/visa|sponsorship|work authorization|legally authorized|right to work|citizen/i, CV.workAuth],
+    [/date of birth|\bdob\b/i, CV.dob],
+    [/gender|\bsex\b/i, CV.gender],
+    [/marital/i, CV.maritalStatus],
+    [/disab/i, CV.disabilityStatus],
+    [/criminal|convict/i, CV.criminalRecord],
+    [/background (check|verification)/i, CV.backgroundCheck],
+    [/night shift|rotational shift|shift timing/i, CV.shiftPreference],
+    [/travel/i, CV.travelPreference],
     [/where are you .{0,15}(based|located)|current location|city/i, CV.location],
     // Specific link fields must come before the combined /link/ catch-all, otherwise a
     // single "LinkedIn URL" input gets the whole "GitHub: ... | LinkedIn: ..." string.
@@ -200,7 +221,7 @@ ${CV.name}`;
 
   async function answerQuestion(questionText) {
     for (const [pattern, answer] of QA_BANK) {
-      if (pattern.test(questionText)) return answer;
+      if (pattern.test(questionText) && String(answer || '').trim()) return answer;
     }
     if (CONFIG.geminiKey) {
       try {
@@ -221,6 +242,9 @@ ${CV.name}`;
       } catch (e) {
         log('Gemini call failed, using generic answer:', e.message);
       }
+    }
+    if (/cgpa|gpa|marks|percentage|score|postal|zip|pin|nationality|citizenship|sponsor|visa|criminal|convict|disab|gender|marital|notice|salary|ctc|experience|graduation|passing year|date of birth|\bdob\b|country|state|city|shift|travel/i.test(questionText)) {
+      return null;
     }
     return GENERIC_ANSWER;
   }
@@ -336,6 +360,13 @@ ${CV.name}`;
       const answer = await answerQuestion(label);
       // unknown question + optional field → leave blank rather than paste a generic paragraph
       const required = field.required || field.getAttribute('aria-required') === 'true' || /\*/.test(label);
+      if (!String(answer || '').trim()) {
+        if (!required) { log(`  ⏭ optional unanswered question skipped: "${label.slice(0, 50)}"`); continue; }
+        log(`  ⚠ no verified answer stored for required question: "${label.slice(0, 60)}" — skipping job`);
+        findButtonByText(scope, /close|cancel|×/i)?.click();
+        scope.querySelector('[aria-label="Close"]')?.click();
+        return false;
+      }
       if (answer === GENERIC_ANSWER && !required) { log(`  ⏭ optional unknown question skipped: "${label.slice(0, 50)}"`); continue; }
       setValue(field, answer);
       log(`  ✍ answered: "${label.slice(0, 60)}..."`);

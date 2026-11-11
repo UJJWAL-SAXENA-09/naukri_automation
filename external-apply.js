@@ -45,7 +45,7 @@ const answerFor = (label, CV) => {
   // test suite caught), while matching only the raw label misses snake_case forms.
   const raw = String(label || '').trim();
   const normalised = raw
-    .replace(/[_-]+/g, ' ')                      // first_name / current-ctc -> spaced
+    .replace(/[^a-z0-9]+/gi, ' ')                // first_name / ctl00$ddl_country / "Name *"
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')      // currentCtc -> current Ctc
     .replace(/\s+/g, ' ')
     .trim();
@@ -64,14 +64,30 @@ const answerFor = (label, CV) => {
     [/current .{0,15}(ctc|salary|compensation)/i, CV.currentCTC],
     [/(expected|desired) .{0,15}(ctc|salary|compensation|pay)|salary expectation/i, CV.expectedCTC],
     [/years? of|total experience|work experience|experience \(/i, CV.yearsOfExperience || '1'],
+    [/\b(cgpa|gpa)\b|grade point/i, CV.cgpa],
+    [/graduation (year|date)|year of (graduation|passing)|passing year/i, CV.graduationYear],
+    [/(10th|class x|secondary).*(score|marks|percentage|cgpa)/i, CV.tenthScore],
+    [/(12th|class xii|higher secondary).*(score|marks|percentage|cgpa)/i, CV.twelfthScore],
+    [/postal|zip|pin\s*code/i, CV.postalCode],
+    [/nationality/i, CV.nationality],
+    [/citizenship/i, CV.citizenship],
+    [/sponsor(ship)?/i, CV.sponsorship],
+    [/country/i, CV.country],
+    [/\bstate\b/i, CV.state],
     [/city|current location|where are you based|location|address/i, CV.location],
-    [/visa|sponsorship|work authori|legally authori|right to work/i, CV.workAuth],
+    [/visa|work authori|legally authori|right to work/i, CV.workAuth],
     [/relocat/i, CV.relocate],
     [/remote|work from home/i, CV.remoteOk],
     [/education|degree|university|college|qualification/i, CV.education],
     [/skills|technolog/i, CV.skills],
     [/date of birth|dob/i, CV.dob],
     [/gender/i, CV.gender],
+    [/marital/i, CV.maritalStatus],
+    [/disab/i, CV.disabilityStatus],
+    [/criminal|convict/i, CV.criminalRecord],
+    [/background (check|verification)/i, CV.backgroundCheck],
+    [/night shift|rotational shift|shift timing/i, CV.shiftPreference],
+    [/travel/i, CV.travelPreference],
     [/cover letter|why (do you|are you)|tell us|about yourself|summary|message/i,
       `I'm ${CV.name}, ${CV.currentRole}. ${(CV.highlights && CV.highlights[0]) || ''}`.trim()],
   ];

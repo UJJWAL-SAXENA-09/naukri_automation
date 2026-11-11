@@ -69,10 +69,13 @@
 
   // ======================= CV DATA (from .env via the runner) =======================
   const CV = __CFG.CV || {
-    name: '', email: '', phone: '', location: '', currentRole: '', company: '', education: '',
+    name: '', email: '', phone: '', location: '', city: '', state: '', country: '', postalCode: '',
+    nationality: '', citizenship: '', currentRole: '', company: '', education: '', degree: '', university: '',
+    graduationYear: '', cgpa: '', cgpaScale: '10', tenthScore: '', tenthYear: '', twelfthScore: '', twelfthYear: '',
     yearsOfExperience: '', yearsNumber: '1', skills: '', highlights: ['', '', '', '', ''], noticePeriod: '',
     currentCTC: '', expectedCTC: '', currentSalary: '', expectedSalary: '', dob: '', gender: '',
-    workAuth: '', github: '', linkedin: '', portfolio: '', links: '', remoteOk: '', relocate: '', startDate: '',
+    workAuth: '', sponsorship: '', maritalStatus: '', disabilityStatus: '', criminalRecord: '', backgroundCheck: '',
+    shiftPreference: '', travelPreference: '', github: '', linkedin: '', portfolio: '', links: '', remoteOk: '', relocate: '', startDate: '',
   };
 
   // ============== QUESTION → ANSWER BANK ==============
@@ -84,11 +87,29 @@
     [/current .{0,15}(ctc|salary|compensation|annual)/i, CV.currentCTC],          // bare lakhs number
     [/(expected|desired) .{0,15}(ctc|salary|compensation|pay)|salary expectation/i, CV.expectedCTC], // bare lakhs
     [/years? of (work |professional |total |relevant )?experience|how (long|many years)|total experience|relevant experience/i, CV.yearsNumber || '1'],
+    [/\b(cgpa|gpa)\b|grade point/i, CV.cgpa],
+    [/graduation (year|date)|year of (graduation|passing)|passing year/i, CV.graduationYear],
+    [/(10th|class x|secondary).*(score|marks|percentage|cgpa)/i, CV.tenthScore],
+    [/(12th|class xii|higher secondary).*(score|marks|percentage|cgpa)/i, CV.twelfthScore],
+    [/postal|zip|pin\s*code/i, CV.postalCode],
+    [/nationality/i, CV.nationality],
+    [/citizenship/i, CV.citizenship],
+    [/sponsor(ship)?/i, CV.sponsorship],
+    [/country of residence|current country|which country|\bcountry\b/i, CV.country],
+    [/\bstate\b/i, CV.state],
     [/remote|work from home|wfh/i, CV.remoteOk],
     [/reloc|move to|shift to|based out of|work from (our )?office|commute|on-?site/i, CV.relocate],
     [/e-?mail/i, CV.email], // before location — "Email address" must not match /address/
     [/where are you .{0,15}(based|located)|current location|city|address/i, CV.location],
     [/visa|sponsorship|work authorization|legally authorized|right to work|citizen/i, CV.workAuth],
+    [/date of birth|\bdob\b/i, CV.dob],
+    [/gender|\bsex\b/i, CV.gender],
+    [/marital/i, CV.maritalStatus],
+    [/disab/i, CV.disabilityStatus],
+    [/criminal|convict/i, CV.criminalRecord],
+    [/background (check|verification)/i, CV.backgroundCheck],
+    [/night shift|rotational shift|shift timing/i, CV.shiftPreference],
+    [/travel/i, CV.travelPreference],
     [/\blinkedin\b/i, CV.linkedin],
     [/\bgithub\b/i, CV.github],
     [/portfolio|personal website/i, CV.portfolio],
@@ -148,7 +169,7 @@
 
   async function answerQuestion(questionText) {
     for (const [pattern, answer] of QA_BANK) {
-      if (pattern.test(questionText)) return answer;
+      if (pattern.test(questionText) && String(answer || '').trim()) return answer;
     }
     if (CONFIG.geminiKey) {
       try {
@@ -169,6 +190,11 @@
       } catch (e) {
         log('Gemini call failed, using generic answer:', e.message);
       }
+    }
+    // Never put a biography into a structured or sensitive field. If a factual
+    // value is missing, leave this application for review instead of inventing it.
+    if (/cgpa|gpa|marks|percentage|score|postal|zip|pin|nationality|citizenship|sponsor|visa|criminal|convict|disab|gender|marital|notice|salary|ctc|experience|graduation|passing year|date of birth|\bdob\b|country|state|city|shift|travel/i.test(questionText)) {
+      return null;
     }
     return GENERIC_ANSWER;
   }
@@ -217,6 +243,8 @@
   // ======================= CHATBOT QUESTIONNAIRE (inside popup) =======================
   async function handleChatbot(doc) {
     const YES = /yes|willing|open to|agree|relocat|remote|immediat|i am able|i can|bengaluru|bangalore/i;
+    let lastQuestion = '';
+    let repeatedQuestionCount = 0;
 
     for (let turn = 0; turn < 15; turn++) {
       await sleep(2500);
@@ -228,6 +256,13 @@
         .map((m) => m.textContent.trim()).filter(Boolean);
       const question = msgs[msgs.length - 1] || drawer.textContent.trim().slice(0, 200);
       log(`  🤖 Q: "${question.slice(0, 80)}"`);
+      const questionKey = question.replace(/\s+/g, ' ').trim().toLowerCase();
+      repeatedQuestionCount = questionKey === lastQuestion ? repeatedQuestionCount + 1 : 1;
+      lastQuestion = questionKey;
+      if (repeatedQuestionCount >= 3) {
+        log('  ⚠ chatbot repeated the same question 3 times — leaving this job for review.');
+        return false;
+      }
 
       // 1. Option chips / radios / checkboxes → pick the YES-style one, else the first
       const options = [...drawer.querySelectorAll(SELECTORS.chatOption)].filter(visible)
@@ -241,6 +276,10 @@
         const input = [...drawer.querySelectorAll(SELECTORS.chatInput)].filter(visible).pop();
         if (!input) { log('  ⚠ chatbot: no options and no input found — finish it manually.'); return false; }
         const answer = await answerQuestion(question);
+        if (!String(answer || '').trim()) {
+          log(`  ⚠ no verified answer stored for "${question.slice(0, 80)}" — leaving this job for review.`);
+          return false;
+        }
         if (input.isContentEditable) {
           // execCommand performs a real edit, so the browser fires a trusted
           // input event; setting .textContent left the framework's state empty.

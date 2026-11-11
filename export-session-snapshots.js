@@ -9,6 +9,7 @@ const path = require('path');
 const { chromium } = require('playwright-core');
 const { browserLaunchOptions } = require('./browser-options');
 const { saveSessionSnapshot, snapshotPath } = require('./session-snapshot');
+const { sessionLooksAuthenticated } = require('./session-auth');
 
 const targets = [
   {
@@ -18,19 +19,16 @@ const targets = [
     // still keeps its own browser profile and its own private snapshot file.
     profile: '.naukri-apply-profile',
     url: 'https://www.naukri.com/mnjuser/profile',
-    authenticated: /Application status|Recommended jobs|resume headline/i,
   },
   {
     name: 'naukri',
     profile: '.naukri-apply-profile',
     url: 'https://www.naukri.com/mnjuser/profile',
-    authenticated: /Application status|Recommended jobs|resume headline/i,
   },
   {
     name: 'wellfound',
     profile: '.wellfound-chrome-profile',
     url: 'https://wellfound.com/jobs',
-    authenticated: /Applied|Messages|Profile/i,
   },
 ];
 
@@ -49,7 +47,7 @@ const targets = [
       await page.goto(target.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await page.waitForTimeout(9000);
       const text = await page.locator('body').innerText().catch(() => '');
-      if (!target.authenticated.test(text)) {
+      if (!sessionLooksAuthenticated(target.name, { url: page.url(), text })) {
         throw new Error(`${target.name} session looks logged out; run its manual login command first`);
       }
       const count = await saveSessionSnapshot(context, target.name);

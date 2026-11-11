@@ -69,6 +69,25 @@ function checkConfig() {
     ? pass("google account", CREDS.email + " (manual sign-in only)")
     : warn("google account", "GOOGLE_EMAIL not set; enter it manually during login");
 
+  const missingApplicationFacts = [
+    "postalCode",
+    "nationality",
+    "citizenship",
+    "sponsorship",
+    "maritalStatus",
+    "criminalRecord",
+    "backgroundCheck",
+    "shiftPreference",
+    "travelPreference",
+    "tenthScore",
+    "tenthYear",
+    "twelfthScore",
+    "twelfthYear",
+  ].filter((key) => !String(CV[key] || "").trim());
+  missingApplicationFacts.length
+    ? warn("extended application facts", "empty: " + missingApplicationFacts.join(", "))
+    : pass("extended application facts", "common structured questions covered");
+
   return CV;
 }
 
@@ -101,6 +120,8 @@ function checkAnswers() {
     "Current CTC",
     "Expected CTC",
     "Years of experience",
+    "What is your CGPA?",
+    "Country of residence",
     "Email address",
     "Where are you currently located?",
     "LinkedIn profile URL",
@@ -226,27 +247,28 @@ function checkFiles() {
 // ---------------------------------------------------------------- browser checks
 async function checkSessions() {
   const { chromium } = require("playwright-core");
+  const { sessionLooksAuthenticated } = require("./session-auth");
   const targets = [
     [
+      "refresh",
       ".naukri-chrome-profile",
       "https://www.naukri.com/mnjuser/profile",
-      /Application status|Recommended jobs|resume headline/i,
       "naukri profile session",
     ],
     [
+      "naukri",
       ".naukri-apply-profile",
       "https://www.naukri.com/mnjuser/profile",
-      /Application status|Recommended jobs|resume headline/i,
       "naukri apply session",
     ],
     [
+      "wellfound",
       ".wellfound-chrome-profile",
       "https://wellfound.com/jobs",
-      /Applied|Messages|Profile/i,
       "wellfound session",
     ],
   ];
-  for (const [dir, url, ok, label] of targets) {
+  for (const [site, dir, url, label] of targets) {
     const full = path.join(__dirname, dir);
     if (!fs.existsSync(full)) {
       warn(label, "no saved session — run the login step");
@@ -280,7 +302,7 @@ async function checkSessions() {
       const text = await page
         .evaluate(() => document.body.innerText)
         .catch(() => "");
-      ok.test(text)
+      sessionLooksAuthenticated(site, { url: page.url(), text })
         ? pass(label, "logged in")
         : fail(label, "looks logged out — run the login step");
 

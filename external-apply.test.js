@@ -32,10 +32,13 @@ const CV = {
   currentCTC: '10', expectedCTC: '20', linkedin: 'li/x', github: 'gh/x', portfolio: 'p.dev',
   education: 'B.Tech', skills: 'React, Node', workAuth: 'Indian citizen', relocate: 'Yes',
   remoteOk: 'Yes', yearsOfExperience: '2', dob: '07/12/2003', gender: 'Male', highlights: ['Shipped X'],
+  country: 'India', state: 'Karnataka', postalCode: '560001', nationality: 'Indian',
+  citizenship: 'Indian', sponsorship: 'No', cgpa: '8.8', graduationYear: '2025',
 };
 assert.strictEqual(answerFor('First Name', CV), 'Ankit');
 assert.strictEqual(answerFor('Last Name', CV), 'Baghel');
 assert.strictEqual(answerFor('Full Name', CV), 'Ankit Baghel');
+assert.strictEqual(answerFor('Name *', CV), 'Ankit Baghel');
 // "Email address" must not fall through to the location/address answer
 assert.strictEqual(answerFor('Email address *', CV), 'a@b.com');
 assert.strictEqual(answerFor('Current CTC (LPA)', CV), '10');
@@ -44,6 +47,8 @@ assert.strictEqual(answerFor('Notice period', CV), '15 days');
 assert.strictEqual(answerFor('LinkedIn Profile URL', CV), 'li/x');
 assert.strictEqual(answerFor('Total years of experience', CV), '2');
 assert.strictEqual(answerFor('Current city', CV), 'Bengaluru');
+assert.strictEqual(answerFor('ctl00$ddl_country', CV), 'India');
+assert.strictEqual(answerFor('What is your CGPA?', CV), '8.8');
 assert.ok(answerFor('Why do you want to join us?', CV).includes('Ankit Baghel'));
 assert.strictEqual(answerFor('Favourite colour', CV), '', 'unknown fields stay empty, never guessed');
 

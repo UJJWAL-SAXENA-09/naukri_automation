@@ -336,6 +336,7 @@ node deploy/setup-macos-schedule.js remove
 | `config.js` | Tiny no-dependency `.env` loader |
 | `.env.example` | Template — copy to `.env` and fill in |
 | `applications.csv` | Every submitted application (git-ignored) |
+| `unanswered-questions.log` | Required fields the local answer bank could not safely answer (git-ignored) |
 | `apply-state-wellfound.json` | Today's application count for the 50/day cap (git-ignored) |
 | `auto-apply-wellfound.log` | Run history (git-ignored) |
 | `.wellfound-chrome-profile/` | Saved Chrome session (git-ignored) |

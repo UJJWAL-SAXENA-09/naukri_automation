@@ -16,6 +16,7 @@ const path = require('path');
 const fs = require('fs');
 const { browserLaunchOptions } = require('./browser-options');
 const { restoreSessionSnapshot, saveSessionSnapshot } = require('./session-snapshot');
+const { sessionLooksLoggedOut } = require('./session-auth');
 const { runManualBrowserLogin } = require('./manual-browser-login');
 const { CV, JOB_FILTERS, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
 const { minimizeBrowserWindows, hideBrowserWindows, SHOW_FLAG } = require('./window-utils');
@@ -156,8 +157,20 @@ const TARGET = Math.min(REQUESTED_MAX || site.perRun || DAILY_CAP, DAILY_CAP - d
 const MAX_RUNTIME_MS = 100 * 60 * 1000;
 const MAX_RESTARTS = 8; // browser gets closed and reopened this many times before giving up
 const IDLE_ROTATE_MS = 4 * 60 * 1000;
+const UNANSWERED_FILE = path.join(__dirname, 'unanswered-questions.log');
+const unansweredSeen = new Set();
 
-const log = (msg) => console.log(`[${new Date().toLocaleString()}] [${SITE_ARG}] ${msg}`);
+const log = (msg) => {
+  const timestamp = new Date().toLocaleString();
+  console.log(`[${timestamp}] [${SITE_ARG}] ${msg}`);
+  if (/no verified answer stored|unmatched \(\d+\):/i.test(msg)) {
+    const key = `${SITE_ARG}:${msg.replace(/\s+/g, ' ').trim()}`;
+    if (!unansweredSeen.has(key)) {
+      unansweredSeen.add(key);
+      fs.appendFileSync(UNANSWERED_FILE, `[${timestamp}] [${SITE_ARG}] ${msg}\n`);
+    }
+  }
+};
 
 // ======== CSV log of every submitted application (created once, appended forever) ========
 const CSV_FILE = path.join(__dirname, 'applications.csv');
@@ -276,6 +289,7 @@ function buildInjection() {
   const VERIFY_PAGES = new Set();
   const externalSeen = new Set();
   const extStats = { applied: 0, skipped: 0, failed: 0 };
+  let loginRequired = false;
 
   const isBusy = (p) => p.evaluate('!!window.__aaBusy').catch(() => false);
 
@@ -486,6 +500,7 @@ function buildInjection() {
   // exhausted, page wedged, crash) — the caller then closes and reopens the browser.
   async function session() {
   const ctx = await launch();
+  let sessionAuthenticated = false;
   if (process.env.BROWSER_SESSION_SNAPSHOT === '1' && (SITE_ARG === 'naukri' || SITE_ARG === 'wellfound')) {
     await restoreSessionSnapshot(ctx, SITE_ARG);
   }
@@ -518,19 +533,6 @@ function buildInjection() {
     });
   }
 
-  // Seed the seen-list from the site's own applied list. The in-page list lives in
-  // localStorage that wellfound's role/job pages do not share across navigations, and
-  // Node's copy resets whenever the browser is reopened — so a restarted run walked
-  // straight back into jobs it had already applied to (observed re-opening the Edmo
-  // job it applied to 20 minutes earlier). Those cost a full cycle each and produce
-  // no application, which then trips the "3 fruitless cycles" restart, which resets
-  // the list again. Seeding from the authoritative list breaks that loop.
-  if (SITE_ARG === 'wellfound' && site.appliedListUrl && !LOGIN_MODE) {
-    const before = seenJobs.size;
-    const found = await collectAppliedSlugs(ctx);
-    for (const slug of found) seenJobs.add(slug);
-    if (seenJobs.size > before) log(`Seeded ${seenJobs.size - before} already-applied jobs from ${site.appliedListUrl}`);
-  }
   const mainPage = ctx.pages()[0] || (await ctx.newPage());
   searchIdx = 0;
   lastActivity = Date.now();
@@ -544,8 +546,25 @@ function buildInjection() {
   // not logged in? every flow needs a session — bail with a clear message
   await mainPage.waitForTimeout(8000);
   const bodyText = await mainPage.evaluate('document.body.innerText.slice(0, 3000)').catch(() => '');
-  if (/sign in|log in to continue|create an account|verify you are human/i.test(bodyText) && !/sign out/i.test(bodyText)) {
-    log('WARNING: page looks logged-out or bot-checked. If runs keep finding 0 jobs, run: node auto-apply-runner.js ' + SITE_ARG + ' login');
+  if (sessionLooksLoggedOut(SITE_ARG, { url: mainPage.url(), text: bodyText })) {
+    loginRequired = true;
+    log(`ERROR: ${SITE_ARG} session is logged out. Run: node auto-apply-runner.js ${SITE_ARG} login`);
+    return;
+  }
+  if (/verify you are human/i.test(bodyText)) {
+    log(`ERROR: ${SITE_ARG} is showing a human-verification check; use the login command to solve it once.`);
+    return;
+  }
+  sessionAuthenticated = true;
+
+  // Seed Wellfound's seen-list only after proving the session is authenticated.
+  // Otherwise /jobs/applications redirects to a public page and a logged-out run
+  // wastes all browser restarts browsing jobs it cannot submit.
+  if (SITE_ARG === 'wellfound' && site.appliedListUrl && !LOGIN_MODE) {
+    const before = seenJobs.size;
+    const found = await collectAppliedSlugs(ctx);
+    for (const slug of found) seenJobs.add(slug);
+    if (seenJobs.size > before) log(`Seeded ${seenJobs.size - before} already-applied jobs from ${site.appliedListUrl}`);
   }
   await inject(mainPage);
 
@@ -615,7 +634,7 @@ function buildInjection() {
     }
   }
   } finally {
-    if (process.env.BROWSER_SESSION_SNAPSHOT === '1' && (SITE_ARG === 'naukri' || SITE_ARG === 'wellfound')) {
+    if (sessionAuthenticated && process.env.BROWSER_SESSION_SNAPSHOT === '1' && (SITE_ARG === 'naukri' || SITE_ARG === 'wellfound')) {
       await saveSessionSnapshot(ctx, SITE_ARG).catch(() => {});
     }
     await ctx.close().catch(() => {});
@@ -629,6 +648,7 @@ function buildInjection() {
     if (attempt > 1) log(`↻ Reopening browser (attempt ${attempt}/${MAX_RESTARTS}) — ${submitted}/${TARGET} done so far`);
     try {
       await session();
+      if (loginRequired) break;
     } catch (e) {
       const msg = String(e && e.message || e).split('\n')[0];
       log('session ended with an error: ' + msg);
