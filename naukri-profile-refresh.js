@@ -16,6 +16,7 @@ const { chromium } = require("playwright-core");
 const path = require("path");
 const fs = require("fs");
 const { browserLaunchOptions } = require("./browser-options");
+const { restoreSessionSnapshot, saveSessionSnapshot } = require("./session-snapshot");
 const { runManualBrowserLogin } = require("./manual-browser-login");
 const { naukriProfileUrl, resumePath } = require("./config");
 const { nextHeadline, uploadedToday } = require("./naukri-helpers");
@@ -101,6 +102,9 @@ async function manualLogin(page) {
         : "--window-position=-32000,-32000",
     ],
   }));
+  if (process.env.BROWSER_SESSION_SNAPSHOT === "1") {
+    await restoreSessionSnapshot(ctx, "refresh");
+  }
   // Hidden rather than parked at -32000,-32000: off-screen made the taskbar button
   // useless, because "restoring" put the window back where no monitor reaches.
   // Pass --show to keep it on screen, --minimize to leave it in the taskbar.
@@ -130,7 +134,24 @@ async function manualLogin(page) {
       timeout: 60000,
     });
 
-    if (!onProfile(new URL(page.url()))) {
+    // Naukri often shows a blank loading shell and briefly changes routes after
+    // domcontentloaded. Checking page.url() immediately produced false "session
+    // unavailable" failures in launchd even though the same profile was logged in.
+    // Wait for authenticated profile content before deciding a manual login is
+    // actually required.
+    const sessionReady = await page
+      .waitForFunction(
+        () =>
+          location.pathname.startsWith("/mnjuser") &&
+          /Application status|Recommended jobs|resume headline/i.test(
+            document.body?.innerText || "",
+          ),
+        { timeout: 30000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+
+    if (!sessionReady) {
       page = await manualLogin(page);
     }
     // login may land on /mnjuser/homepage — make sure we're on the profile itself
@@ -250,6 +271,9 @@ async function manualLogin(page) {
     );
     process.exitCode = 1;
   } finally {
+    if (process.env.BROWSER_SESSION_SNAPSHOT === "1") {
+      await saveSessionSnapshot(ctx, "refresh").catch(() => {});
+    }
     await ctx.close();
   }
 })();

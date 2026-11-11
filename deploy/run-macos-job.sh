@@ -35,6 +35,7 @@ trap 'rmdir "$lock_dir" 2>/dev/null || true' EXIT INT TERM
 cd "$repo_dir"
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export TZ="Asia/Kolkata"
+export BROWSER_SESSION_SNAPSHOT=1
 
 # The same private flag controls Docker and macOS. Scheduled auto-apply is dry-run
 # unless the user explicitly sets AUTO_APPLY_LIVE=1 in the git-ignored .env.
@@ -44,6 +45,6 @@ fi
 
 print "[$(date -Iseconds)] starting $job: $node_bin ${command_args[*]}"
 /usr/bin/caffeinate -i "$node_bin" "${command_args[@]}"
-status=$?
-print "[$(date -Iseconds)] finished $job with exit code $status"
-exit "$status"
+exit_code=$?
+print "[$(date -Iseconds)] finished $job with exit code $exit_code"
+exit "$exit_code"

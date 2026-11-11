@@ -11,7 +11,10 @@ function browserLaunchOptions(options = {}) {
   // A one-time login is performed in normal Chrome. On macOS those cookies are
   // encrypted with the user's real Keychain. Playwright normally adds mock/basic
   // password-store flags, which makes the same persistent profile appear logged out.
-  const keychainArgs = process.platform === "darwin"
+  // A LaunchAgent has no Terminal app identity and cannot read Chrome's login
+  // keychain. Scheduled runs use an owner-only session snapshot instead and keep
+  // Playwright's mock/basic password store enabled.
+  const keychainArgs = process.platform === "darwin" && process.env.BROWSER_SESSION_SNAPSHOT !== "1"
     ? { ignoreDefaultArgs: ["--use-mock-keychain", "--password-store=basic"] }
     : {};
   return {

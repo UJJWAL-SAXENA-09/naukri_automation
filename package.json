@@ -5,6 +5,7 @@
   "scripts": {
     "refresh": "node naukri-profile-refresh.js",
     "login": "node naukri-profile-refresh.js login",
+    "session:export": "node export-session-snapshots.js",
     "apply:all": "node auto-apply-all.js",
     "apply:naukri": "node auto-apply-runner.js naukri --live",
     "apply:wellfound": "node auto-apply-runner.js wellfound --live"

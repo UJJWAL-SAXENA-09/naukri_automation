@@ -15,6 +15,7 @@
 const path = require('path');
 const fs = require('fs');
 const { browserLaunchOptions } = require('./browser-options');
+const { restoreSessionSnapshot, saveSessionSnapshot } = require('./session-snapshot');
 const { runManualBrowserLogin } = require('./manual-browser-login');
 const { CV, JOB_FILTERS, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
 const { minimizeBrowserWindows, hideBrowserWindows, SHOW_FLAG } = require('./window-utils');
@@ -493,6 +494,9 @@ function buildInjection() {
   // exhausted, page wedged, crash) — the caller then closes and reopens the browser.
   async function session() {
   const ctx = await launch();
+  if (process.env.BROWSER_SESSION_SNAPSHOT === '1' && (SITE_ARG === 'naukri' || SITE_ARG === 'wellfound')) {
+    await restoreSessionSnapshot(ctx, SITE_ARG);
+  }
   await tuckAway(ctx);
 
   // Current Naukri pages can ignore synthetic DOM clicks. Expose one narrowly
@@ -619,6 +623,9 @@ function buildInjection() {
     }
   }
   } finally {
+    if (process.env.BROWSER_SESSION_SNAPSHOT === '1' && (SITE_ARG === 'naukri' || SITE_ARG === 'wellfound')) {
+      await saveSessionSnapshot(ctx, SITE_ARG).catch(() => {});
+    }
     await ctx.close().catch(() => {});
   }
   }

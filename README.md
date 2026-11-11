@@ -291,9 +291,19 @@ Default `Asia/Kolkata` schedule:
 After completing all one-time logins and dry-run tests:
 
 ```bash
+npm run session:export
 node deploy/setup-macos-schedule.js install
 node deploy/setup-macos-schedule.js status
 ```
+
+`session:export` copies the already-authenticated browser sessions—not passwords—
+into owner-only files under the Git-ignored `private/` directory. This is required
+on macOS because a LaunchAgent cannot read Chrome cookies encrypted with the login
+Keychain. Re-run it after signing in again or changing accounts.
+
+Keep the scheduled runtime outside macOS-protected `Desktop`, `Documents`, and
+`Downloads` folders. A path such as `~/Projects/naukri-automation` avoids background
+file-access failures. A symlink may remain at the old location for editor access.
 
 Auto-apply remains dry-run while `AUTO_APPLY_LIVE=0` in the local `.env`. Logs are
 written under `runtime/logs/`. To remove all three schedules:
