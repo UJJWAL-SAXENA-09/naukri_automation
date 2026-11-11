@@ -73,6 +73,7 @@
       `${CV.startDate}`],
     [/current .{0,12}fixed .{0,12}(ctc|salary|compensation)|fixed (ctc|salary|compensation)/i, CV.currentFixedCTC],
     [/current .{0,12}(variable|bonus) .{0,12}(ctc|salary|compensation)|variable (ctc|salary|compensation)|annual bonus/i, CV.currentVariableCTC],
+    [/bonus details|other compensation|additional compensation/i, CV.bonusDetails],
     [/expected .{0,20}negotiable|salary .{0,20}negotiable/i, CV.expectedCTCNegotiable],
     [/\b(cgpa|gpa)\b|grade point/i, CV.cgpa],
     [/graduation (year|date)|year of (graduation|passing)|passing year/i, CV.graduationYear],

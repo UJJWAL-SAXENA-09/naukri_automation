@@ -88,6 +88,7 @@
     [/notice period|when can you (start|join)|start date|joining|how soon/i, CV.noticePeriod],
     [/current .{0,12}fixed .{0,12}(ctc|salary|compensation)|fixed (ctc|salary|compensation)/i, CV.currentFixedCTC],
     [/current .{0,12}(variable|bonus) .{0,12}(ctc|salary|compensation)|variable (ctc|salary|compensation)|annual bonus/i, CV.currentVariableCTC],
+    [/bonus details|other compensation|additional compensation/i, CV.bonusDetails],
     [/current .{0,15}(ctc|salary|compensation|annual)/i, CV.currentCTC],          // bare lakhs number
     [/expected .{0,20}negotiable|salary .{0,20}negotiable/i, CV.expectedCTCNegotiable],
     [/(expected|desired) .{0,15}(ctc|salary|compensation|pay)|salary expectation/i, CV.expectedCTC], // bare lakhs

@@ -63,6 +63,7 @@ const CV = {
   expectedCTC: g('EXPECTED_CTC'),               // e.g. "18-25"
   currentFixedCTC: g('CURRENT_FIXED_CTC'),
   currentVariableCTC: g('CURRENT_VARIABLE_CTC'),
+  bonusDetails: g('BONUS_DETAILS'),
   expectedCTCNegotiable: g('EXPECTED_CTC_NEGOTIABLE'),
   currentSalary: g('CURRENT_CTC') + ' LPA',     // formatted for free-text fields
   expectedSalary: g('EXPECTED_CTC') + ' LPA',
