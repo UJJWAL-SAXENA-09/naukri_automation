@@ -16,6 +16,7 @@ const { chromium } = require("playwright-core");
 const path = require("path");
 const fs = require("fs");
 const { browserLaunchOptions } = require("./browser-options");
+const { runManualBrowserLogin } = require("./manual-browser-login");
 const { naukriProfileUrl, resumePath } = require("./config");
 const { nextHeadline, uploadedToday } = require("./naukri-helpers");
 const {
@@ -79,6 +80,10 @@ async function manualLogin(page) {
 }
 
 (async () => {
+  if (LOGIN_MODE) {
+    await runManualBrowserLogin("refresh");
+    return;
+  }
   const ctx = await chromium.launchPersistentContext(PROFILE_DIR, browserLaunchOptions({
     headless: false, // naukri's Akamai bot-check blocks headless; minimised headed instead
     viewport: { width: 1280, height: 850 },

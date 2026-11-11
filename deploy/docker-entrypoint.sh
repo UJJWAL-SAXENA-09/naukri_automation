@@ -101,11 +101,8 @@ if [ "${1:-}" = "interactive-login" ]; then
   x11vnc -display :99 -localhost -nopw -forever -shared >/tmp/x11vnc.log 2>&1 &
   websockify --web /usr/share/novnc 6080 localhost:5900 >/tmp/websockify.log 2>&1 &
   case "${2:-refresh}" in
-    refresh)
-      exec gosu automation env DISPLAY=:99 node naukri-profile-refresh.js login --show
-      ;;
-    naukri|wellfound|indeed)
-      exec gosu automation env DISPLAY=:99 node auto-apply-runner.js "$2" login --show
+    refresh|naukri|wellfound|indeed)
+      exec gosu automation env DISPLAY=:99 node manual-browser-login.js "$2"
       ;;
     *)
       echo "Unknown login target: ${2:-}. Use refresh, naukri, wellfound, or indeed." >&2

@@ -15,6 +15,7 @@
 const { chromium } = require("playwright-core");
 const path = require("path");
 const { browserLaunchOptions } = require("./browser-options");
+const { runManualBrowserLogin } = require("./manual-browser-login");
 
 const PROFILE_DIR = path.join(__dirname, ".wellfound-chrome-profile");
 const CHECK_ONLY = process.argv.includes("--check");
@@ -36,6 +37,10 @@ async function isLoggedIn(page) {
 }
 
 (async () => {
+  if (!CHECK_ONLY) {
+    await runManualBrowserLogin("wellfound");
+    return;
+  }
   const ctx = await chromium.launchPersistentContext(PROFILE_DIR, browserLaunchOptions({
     headless: false,
     viewport: { width: 1280, height: 900 },

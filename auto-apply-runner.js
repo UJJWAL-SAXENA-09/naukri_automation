@@ -15,6 +15,7 @@
 const path = require('path');
 const fs = require('fs');
 const { browserLaunchOptions } = require('./browser-options');
+const { runManualBrowserLogin } = require('./manual-browser-login');
 const { CV, JOB_FILTERS, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
 const { minimizeBrowserWindows, hideBrowserWindows, SHOW_FLAG } = require('./window-utils');
 const { applyExternal } = require('./external-apply'); // "Apply on company site" jobs, driven from Node
@@ -203,6 +204,10 @@ function buildInjection() {
 }
 
 (async () => {
+  if (LOGIN_MODE) {
+    await runManualBrowserLogin(SITE_ARG);
+    return;
+  }
   if (SCHEDULED && !LOGIN_MODE) {
     const hour = new Date().getHours();
     if (hour < ACTIVE_FROM || hour >= ACTIVE_UNTIL) {
@@ -262,16 +267,6 @@ function buildInjection() {
     sweepTimer.unref?.();
     ctx.once('close', () => { if (sweepTimer) clearInterval(sweepTimer); });
   };
-
-  if (LOGIN_MODE) {
-    const ctx = await launch();
-    const mainPage = ctx.pages()[0] || (await ctx.newPage());
-    await mainPage.goto(site.loginUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
-    log('Chrome is open — log in to the site, then CLOSE the browser window. The session is saved automatically.');
-    await new Promise((res) => ctx.on('close', res));
-    log('Login window closed. Session saved. Now test with: node auto-apply-runner.js ' + SITE_ARG);
-    return;
-  }
 
   log(`Starting. mode=${LIVE ? 'LIVE' : 'DRY RUN'} target=${TARGET} applications, max ${MAX_RUNTIME_MS / 60000} min`);
   const deadline = Date.now() + MAX_RUNTIME_MS;
