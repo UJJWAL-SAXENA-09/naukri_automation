@@ -7,14 +7,56 @@ services:
     env_file: .env
     environment:
       TZ: Asia/Kolkata
-      SCHEDULE_SECONDS: "3600"
+      # Every hour at minute 05 (00:05, 01:05, ...).
+      SCHEDULE_MINUTE: "${NAUKRI_REFRESH_MINUTE:-5}"
       BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
       CONTAINERIZED_BROWSER: "1"
     volumes:
       # Never commit these directories. They contain browser cookies, logs, and CV data.
       - ./runtime:/state
       - ./private:/private:ro
-    command: ["scheduler"]
+    command: ["scheduler", "naukri-profile-refresh.js"]
+
+  # Disabled until explicitly started with --profile auto-apply. Dry-run is the
+  # default; set AUTO_APPLY_LIVE=1 in the server's private .env only after review.
+  naukri-auto-apply:
+    profiles: ["auto-apply"]
+    build: .
+    image: naukri-automation:local
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: Asia/Kolkata
+      SCHEDULE_TIMES: "${NAUKRI_AUTO_APPLY_TIMES:-09:20,15:20}"
+      AUTO_APPLY_LIVE: "${AUTO_APPLY_LIVE:-0}"
+      SCHEDULER_LOCK_FILE: /state/auto-apply.lock
+      BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
+      CONTAINERIZED_BROWSER: "1"
+    volumes:
+      - ./runtime:/state
+      - ./private:/private:ro
+    command: ["scheduler", "auto-apply-runner.js", "naukri", "--scheduled"]
+
+  wellfound-auto-apply:
+    profiles: ["auto-apply"]
+    build: .
+    image: naukri-automation:local
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: Asia/Kolkata
+      # Matches the original Wellfound repository's documented daily time.
+      SCHEDULE_TIMES: "${WELLFOUND_AUTO_APPLY_TIMES:-12:30}"
+      AUTO_APPLY_LIVE: "${AUTO_APPLY_LIVE:-0}"
+      SCHEDULER_LOCK_FILE: /state/auto-apply.lock
+      BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
+      CONTAINERIZED_BROWSER: "1"
+    volumes:
+      - ./runtime:/state
+      - ./private:/private:ro
+    command: ["scheduler", "auto-apply-runner.js", "wellfound", "--scheduled"]
 
   # Start only when a saved Naukri session has expired. The host port is bound to
   # localhost, so it is reachable only through an SSH tunnel—not the public internet.
@@ -35,4 +77,5 @@ services:
       - ./private:/private:ro
     ports:
       - "127.0.0.1:6080:6080"
-    command: ["interactive-login"]
+    # Override the last argument with `naukri` or `wellfound` for apply sessions.
+    command: ["interactive-login", "refresh"]

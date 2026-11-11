@@ -1,7 +1,20 @@
 # Oracle Cloud deployment
 
-This deployment runs only the hourly Naukri profile-refresh task. Auto-apply is
-deliberately not scheduled by default: first test each site in dry-run mode.
+This deployment contains schedules for all three requested jobs. Profile refresh
+starts normally; both auto-apply services are behind the `auto-apply` Compose
+profile and remain in dry-run mode until explicitly enabled.
+
+Default times use `Asia/Kolkata`:
+
+| Job | Default schedule |
+|---|---|
+| Naukri profile refresh | Every hour at minute `05` |
+| Naukri auto-apply | `09:20` and `15:20` daily |
+| Wellfound auto-apply | `12:30` daily (matching the source repository) |
+
+Override the times in the server's private `.env` with
+`NAUKRI_REFRESH_MINUTE`, `NAUKRI_AUTO_APPLY_TIMES`, and
+`WELLFOUND_AUTO_APPLY_TIMES`.
 
 ## Server preparation
 
@@ -26,20 +39,21 @@ The `.env`, `private/`, and `runtime/` directories are excluded from Git and fro
 the Docker build. `runtime/` holds logged-in Chrome profiles/cookies and must never
 be copied to GitHub Actions artifacts, caches, or another public location.
 
-Start the hourly service:
+Start the hourly profile-refresh service:
 
 ```bash
 docker compose up --build -d
 docker compose logs -f naukri-refresh
 ```
 
-## First login
+## First logins
 
 The service needs a one-time manual Google/Naukri login inside its persistent
 Chrome profile. It intentionally does not store or type a Google password. A
 secure temporary noVNC console is provided, bound to the VM's `localhost` only.
 
-First stop the scheduler, then start the temporary login container:
+First stop the schedulers, then start the temporary login container for each
+profile. Only one login console should run at a time:
 
 ```bash
 docker compose stop naukri-refresh
@@ -54,7 +68,15 @@ ssh -L 6080:localhost:6080 ubuntu@YOUR_ORACLE_PUBLIC_IP
 ```
 
 Open `http://localhost:6080/vnc.html` locally, complete Google/Naukri sign-in,
-and wait for the container to exit. Then restart the hourly service:
+and wait for the container to exit. Repeat for the independent Naukri auto-apply
+and Wellfound profiles by overriding the login target:
+
+```bash
+docker compose --profile login run --rm --service-ports naukri-login interactive-login naukri
+docker compose --profile login run --rm --service-ports naukri-login interactive-login wellfound
+```
+
+Then restart the hourly service:
 
 ```bash
 docker compose up -d naukri-refresh
@@ -65,11 +87,32 @@ add a public Oracle security-list rule for port 6080. Once login is complete, th
 profile under `runtime/naukri-chrome-profile/` is reused every hour until Google or
 Naukri invalidates it.
 
+## Auto-apply rollout
+
+Start the scheduled auto-apply services in dry-run mode first:
+
+```bash
+docker compose --profile auto-apply up --build -d
+docker compose logs -f naukri-auto-apply wellfound-auto-apply
+```
+
+Dry runs fill forms but do not submit them. After reviewing their behavior, set
+`AUTO_APPLY_LIVE=1` only in the server's private `.env`, then recreate the services:
+
+```bash
+docker compose --profile auto-apply up -d --force-recreate
+```
+
+Both auto-apply services share `/state/auto-apply.lock`, so a long run from one site
+cannot overlap and corrupt the shared application CSV. Daily caps in the application
+runner still apply: 20 for Naukri and 50 for Wellfound.
+
 ## Operations
 
 ```bash
 docker compose ps
 docker compose logs --tail=100 naukri-refresh
+docker compose --profile auto-apply logs --tail=100 naukri-auto-apply wellfound-auto-apply
 docker compose restart naukri-refresh
 docker compose down
 ```

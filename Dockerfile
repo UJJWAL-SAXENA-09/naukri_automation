@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CONTAINERIZED_BROWSER=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends chromium xvfb x11vnc novnc websockify gosu ca-certificates fonts-liberation fonts-noto-color-emoji \
+    && apt-get install -y --no-install-recommends chromium xvfb x11vnc novnc websockify gosu util-linux ca-certificates fonts-liberation fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 automation \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin automation
