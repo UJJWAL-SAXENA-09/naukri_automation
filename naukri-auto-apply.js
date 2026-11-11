@@ -49,7 +49,7 @@
     geminiKey: __CFG.geminiKey || '',   // optional: Gemini API key for unmatched chatbot questions
 
     // Job titles to apply to (case-insensitive substring match on the job title)
-    TITLE_KEYWORDS: [
+    TITLE_KEYWORDS: __CFG.JOB_FILTERS?.titleKeywords?.length ? __CFG.JOB_FILTERS.titleKeywords : [
       'full stack', 'fullstack', 'full-stack', 'mern', 'backend', 'back end',
       'frontend', 'front end', 'software engineer', 'software developer',
       'web developer', 'ai engineer', 'ai developer', 'ai specialist',
@@ -60,7 +60,7 @@
       'react native', 'sde', 'member of technical staff',
     ],
     // Skip jobs whose title contains any of these
-    TITLE_BLOCKLIST: [
+    TITLE_BLOCKLIST: __CFG.JOB_FILTERS?.titleBlocklist?.length ? __CFG.JOB_FILTERS.titleBlocklist : [
       'senior staff', 'principal', 'director', 'manager', 'lead', 'devops',
       'data engineer', 'qa', 'test', 'intern', 'designer', 'sales', 'marketing',
       '.net', 'c#', 'php', 'ruby', 'golang', 'ios', 'android native', 'flutter',
@@ -98,11 +98,11 @@
     [/tell (us|me) about yourself|introduce yourself|about you|summary/i,
       `I'm ${CV.name}, ${CV.currentRole}. ${CV.highlights[0] || ''}. Previously: ${CV.highlights[2] || ''}. ${CV.highlights[3] || ''}.`],
     [/react|frontend|front-end/i,
-      `Strong frontend experience: React.js, Next.js, Redux, TypeScript and Tailwind CSS, plus React Native.`],
+      `My experience is backend-focused rather than frontend-focused. My core stack is C#/.NET, REST APIs, PostgreSQL, Kafka, Docker and Kubernetes.`],
     [/node|backend|back-end|api/i,
-      `I build production backends daily: Node.js/Express and Python/FastAPI, REST + GraphQL, WebSockets, MongoDB/PostgreSQL/Redis, on cloud with Docker and CI/CD.`],
+      `I build production backends with C#/.NET, REST APIs, microservices, PostgreSQL-backed background processing, Kafka/Avro, Docker and CI/CD.`],
     [/\b(ai|llm|ml|machine learning|genai|langchain)\b/i,
-      `AI is a core focus: production GenAI agents, RAG pipelines, tool calling, MCP and multi-agent systems.`],
+      `My current professional focus is backend and platform engineering; I do not claim production AI/ML experience.`],
     [/education|degree|university|college|qualification/i, CV.education],
     [/phone|contact number|mobile/i, CV.phone],
     [/^name$|your name|full name|candidate name|first name/i, CV.name],

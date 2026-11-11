@@ -232,12 +232,14 @@ counted in `apply-state-wellfound.json` toward the daily cap.
 
 ## Customizing which jobs it applies to
 
-Edit the `CONFIG` block at the top of `wellfound-auto-apply.js`:
+Set the comma-separated `TARGET_TITLE_KEYWORDS` and `TITLE_BLOCKLIST` values in
+your local `.env`. These filters are shared by Naukri, Wellfound, and Indeed, so
+the automation cannot silently use another person's technology preferences.
 
 | Setting | What it does |
 |---|---|
-| `TITLE_KEYWORDS` | Apply only when the job title contains one of these (case-insensitive) |
-| `TITLE_BLOCKLIST` | Skip when the title contains any of these (senior, manager, .net, …) |
+| `TARGET_TITLE_KEYWORDS` | Apply only when the title contains one of these (case-insensitive) |
+| `TITLE_BLOCKLIST` | Skip when the title contains any of these |
 | `MAX_APPLICATIONS` | Per-run cap (the runner overrides it with the daily cap remaining) |
 | `MIN_DELAY_MS` / `MAX_DELAY_MS` | Wait between applications (default 60–150 s — human pace; going faster trips Wellfound's bot-check) |
 

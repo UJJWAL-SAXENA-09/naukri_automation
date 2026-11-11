@@ -46,25 +46,29 @@ const CV = {
   expectedSalary: g('EXPECTED_CTC') + ' LPA',
   dob: g('DOB'),
   gender: g('GENDER'),
-  workAuth: g('WORK_AUTH', 'Authorized to work in my country of residence.'),
+  workAuth: g('WORK_AUTH'),
   // links
   github: g('GITHUB_URL'),
   linkedin: g('LINKEDIN_URL'),
   portfolio: g('PORTFOLIO_URL'),
   links: `GitHub: ${g('GITHUB_URL')} | LinkedIn: ${g('LINKEDIN_URL')} | Portfolio: ${g('PORTFOLIO_URL')}`,
   // derived sentences
-  remoteOk: 'Yes, I am fully set up for remote work and also open to hybrid/onsite.',
-  relocate: `Yes, I am open to relocation. I am currently based in ${g('LOCATION')}.`,
-  startDate: `I can start within ${g('NOTICE_PERIOD')}.`,
+  remoteOk: g('REMOTE_PREFERENCE'),
+  relocate: g('RELOCATION_PREFERENCE'),
+  startDate: g('NOTICE_PERIOD') ? `I can start within ${g('NOTICE_PERIOD')}.` : '',
 };
 
 // Passwords are deliberately never read or stored. Log in interactively once;
 // Chrome keeps the resulting session in a local, git-ignored profile directory.
 const CREDS = { email: g('GOOGLE_EMAIL') || g('EMAIL') };
 const geminiKey = g('GEMINI_KEY');
+const JOB_FILTERS = {
+  titleKeywords: g('TARGET_TITLE_KEYWORDS').split(',').map((s) => s.trim()).filter(Boolean),
+  titleBlocklist: g('TITLE_BLOCKLIST').split(',').map((s) => s.trim()).filter(Boolean),
+};
 const naukriProfileUrl = g('NAUKRI_PROFILE_URL', 'https://www.naukri.com/mnjuser/profile');
 // The PDF uploaded to the Naukri profile and attached to external application forms.
 // Relative names resolve against the repo folder; an absolute path is used as-is.
 const resumePath = path.resolve(__dirname, g('RESUME_FILE', 'Ankit Baghel.pdf'));
 
-module.exports = { CV, CREDS, geminiKey, naukriProfileUrl, resumePath };
+module.exports = { CV, CREDS, JOB_FILTERS, geminiKey, naukriProfileUrl, resumePath };

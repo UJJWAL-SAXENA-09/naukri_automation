@@ -15,7 +15,7 @@
 const path = require('path');
 const fs = require('fs');
 const { browserLaunchOptions } = require('./browser-options');
-const { CV, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
+const { CV, JOB_FILTERS, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
 const { minimizeBrowserWindows, hideBrowserWindows, SHOW_FLAG } = require('./window-utils');
 const { applyExternal } = require('./external-apply'); // "Apply on company site" jobs, driven from Node
 // stealth patches the fingerprint leaks reCAPTCHA uses to flag automation; falls back to plain playwright
@@ -79,9 +79,7 @@ const SITES = {
       'https://wellfound.com/role/l/software-engineer/india',
       'https://wellfound.com/role/r/software-engineer',
       'https://wellfound.com/role/r/backend-engineer',
-      'https://wellfound.com/role/r/full-stack-engineer',
-      'https://wellfound.com/role/r/frontend-engineer',
-      'https://wellfound.com/role/r/mobile-engineer',
+      'https://wellfound.com/role/r/platform-engineer',
     ],
     loginUrl: 'https://wellfound.com/login',
     // Wellfound's own record of what was submitted. Checked after every live apply:
@@ -103,12 +101,12 @@ const SITES = {
     // collides with the hourly refresh on .naukri-chrome-profile. Re-copy if it logs out.
     profile: '.naukri-apply-profile',
     searches: [
-      'https://www.naukri.com/full-stack-developer-jobs?experience=1',
-      'https://www.naukri.com/software-developer-jobs?experience=1',
+      'https://www.naukri.com/dot-net-developer-jobs?experience=1',
+      'https://www.naukri.com/dot-net-core-developer-jobs?experience=1',
+      'https://www.naukri.com/c-sharp-developer-jobs?experience=1',
       'https://www.naukri.com/backend-developer-jobs?experience=1',
-      'https://www.naukri.com/mern-stack-developer-jobs?experience=1',
-      'https://www.naukri.com/react-js-developer-jobs?experience=1',
-      'https://www.naukri.com/node-js-developer-jobs?experience=1',
+      'https://www.naukri.com/software-engineer-jobs?experience=1',
+      'https://www.naukri.com/microservices-developer-jobs?experience=1',
     ],
     loginUrl: 'https://www.naukri.com/nlogin/login',
     // inject only on search pages (…-jobs…), never into the job popup the script drives itself
@@ -184,7 +182,7 @@ function buildInjection() {
   // so no PII lives in the injected script itself
   return `(async () => {
     if (window.__aaBusy) return; window.__aaBusy = true;
-    window.__APPLY_CONFIG = ${JSON.stringify({ CV, geminiKey, seen: [...seenJobs] })};
+    window.__APPLY_CONFIG = ${JSON.stringify({ CV, JOB_FILTERS, geminiKey, seen: [...seenJobs] })};
     try { await ${raw}
     } finally { window.__aaBusy = false; }
   })()`;

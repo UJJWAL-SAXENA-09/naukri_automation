@@ -47,7 +47,7 @@
     geminiKey: __CFG.geminiKey || '',   // optional: Gemini API key for unmatched questions
 
     // Job titles to apply to (case-insensitive substring match on the job title)
-    TITLE_KEYWORDS: [
+    TITLE_KEYWORDS: __CFG.JOB_FILTERS?.titleKeywords?.length ? __CFG.JOB_FILTERS.titleKeywords : [
       'full stack', 'fullstack', 'full-stack', 'mern', 'backend', 'back end',
       'frontend', 'front end', 'software engineer', 'software developer',
       'web developer', 'ai engineer', 'ai developer', 'ai specialist',
@@ -58,7 +58,7 @@
       'react native', 'sde', 'member of technical staff',
     ],
     // Skip jobs whose title contains any of these
-    TITLE_BLOCKLIST: [
+    TITLE_BLOCKLIST: __CFG.JOB_FILTERS?.titleBlocklist?.length ? __CFG.JOB_FILTERS.titleBlocklist : [
       // 'ai trainer' gig postings (DataAnnotation etc.): their apply wizard hangs at a
       // never-resolving spinner, so they burn time without ever submitting
       'trainer', 'annotation',

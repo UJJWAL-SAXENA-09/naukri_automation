@@ -31,7 +31,7 @@ assert.strictEqual(uploadedToday('', now), false);
 const fs = require('fs');
 const src = fs.readFileSync(require('path').join(__dirname, 'naukri-auto-apply.js'), 'utf8');
 const list = (name) => JSON.parse(
-  new RegExp(`${name}:\\s*(\\[[^\\]]*\\])`).exec(src)[1]
+  new RegExp(`${name}:[^\\[]*(\\[[^\\]]*\\])`).exec(src)[1]
     .replace(/\/\/[^\n]*/g, '')   // drop line comments
     .replace(/'/g, '"')           // JS single-quoted → JSON (no apostrophes in these entries)
     .replace(/,\s*\]$/, ']')      // trailing comma
@@ -62,6 +62,19 @@ for (const title of ['QA Engineer', 'DevOps Engineer', 'Engineering Manager', '.
 for (const title of ['Full Stack Team Lead', 'Backend QA Engineer', 'Python Test Engineer',
                      'Full Stack Developer Intern', 'React Native iOS Developer']) {
   assert.ok(!titleOk(title), `keyword matched but blocklist must win: ${title}`);
+}
+
+// When local .env filters are configured, verify that they override the legacy
+// JavaScript-oriented defaults without embedding personal values in source control.
+const { JOB_FILTERS } = require('./config');
+if (JOB_FILTERS.titleKeywords.length) {
+  const configuredTitleOk = (t) => {
+    const lower = t.toLowerCase();
+    return JOB_FILTERS.titleKeywords.some((k) => lower.includes(k.toLowerCase())) &&
+      !JOB_FILTERS.titleBlocklist.some((k) => lower.includes(k.toLowerCase()));
+  };
+  assert.ok(configuredTitleOk('.NET Backend Engineer'), 'configured filters must accept .NET backend roles');
+  assert.ok(!configuredTitleOk('Senior .NET Backend Engineer'), 'configured filters must block senior roles');
 }
 
 console.log('naukri-helpers: all checks passed');

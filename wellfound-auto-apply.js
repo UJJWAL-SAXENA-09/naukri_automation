@@ -33,7 +33,7 @@
     geminiKey: __CFG.geminiKey || '',   // optional: Gemini API key for unmatched questions
 
     // Job titles to apply to (case-insensitive substring match on the job title)
-    TITLE_KEYWORDS: [
+    TITLE_KEYWORDS: __CFG.JOB_FILTERS?.titleKeywords?.length ? __CFG.JOB_FILTERS.titleKeywords : [
       'full stack', 'fullstack', 'full-stack', 'mern', 'backend', 'back end',
       'frontend', 'front end', 'software engineer', 'software developer',
       'web developer', 'ai engineer', 'ai developer', 'ml engineer',
@@ -42,7 +42,7 @@
       'platform engineer', 'founding engineer',
     ],
     // Skip jobs whose title contains any of these
-    TITLE_BLOCKLIST: [
+    TITLE_BLOCKLIST: __CFG.JOB_FILTERS?.titleBlocklist?.length ? __CFG.JOB_FILTERS.titleBlocklist : [
       'senior', 'principal', 'director', 'manager', 'lead', 'devops',
       'data engineer', 'qa', 'test', 'intern', 'designer', 'sales', 'marketing',
       'teacher', 'trainer', 'tutor', 'instructor', 'coach',
@@ -85,11 +85,11 @@
     [/(biggest|proudest|favorite) (project|achievement|accomplishment)|worked on/i,
       `${CV.highlights[0] || ''}. I owned it end to end, from architecture through deployment and CI/CD.`],
     [/react|frontend|front-end/i,
-      `Strong frontend experience: React.js, Next.js, Redux, TypeScript and Tailwind CSS, plus React Native for cross-platform mobile apps.`],
+      `My experience is backend-focused rather than frontend-focused. My core stack is C#/.NET, REST APIs, PostgreSQL, Kafka, Docker and Kubernetes.`],
     [/node|backend|back-end|api/i,
-      `I build production backends daily: Node.js/Express and Python/FastAPI, REST + GraphQL, WebSockets, MongoDB/PostgreSQL/Redis, on cloud with Docker and CI/CD.`],
+      `I build production backends with C#/.NET, REST APIs, microservices, PostgreSQL-backed background processing, Kafka/Avro, Docker and CI/CD.`],
     [/\b(ai|llm|ml|machine learning|genai|langchain)\b/i,
-      `AI is a core focus: production GenAI agents, RAG pipelines, prompt engineering, tool calling, MCP and multi-agent systems.`],
+      `My current professional focus is backend and platform engineering; I do not claim production AI/ML experience.`],
     [/education|degree|university|college/i, CV.education],
     [/phone|contact number|mobile/i, CV.phone],
     [/e-?mail/i, CV.email],
@@ -108,13 +108,13 @@ ${CV.linkedin} · ${CV.github} · ${CV.portfolio}
 
 Dear ${company ? company + ' team' : 'Hiring Manager'},
 
-I'd like to apply for the ${title || 'Full Stack Developer'} position at ${company || 'your company'}.
+I'd like to apply for the ${title || 'Backend Software Engineer'} position at ${company || 'your company'}.
 
 I'm currently ${CV.currentRole || 'a software developer'}, working daily with ${CV.skills.split(',').slice(0, 8).join(',').trim()}. A recent example of my work: ${CV.highlights[0] || 'shipping production features end to end'}.
 
 ${CV.highlights[1] ? CV.highlights[1] + '.' : ''}${CV.highlights[2] ? ' ' + CV.highlights[2] + '.' : ''}
 
-I'm interested in this role because the ${title || 'Full Stack Developer'} role matches the stack I work in every day, and I'd get to own features end to end${company ? ' at ' + company : ''}. Happy to walk through any of the above if it's useful.
+I'm interested in this role because the ${title || 'Backend Software Engineer'} role matches the stack I work in every day, and I'd get to own features end to end${company ? ' at ' + company : ''}. Happy to walk through any of the above if it's useful.
 
 Thank you for your time.
 
