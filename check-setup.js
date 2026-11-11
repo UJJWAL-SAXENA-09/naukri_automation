@@ -122,6 +122,8 @@ function checkAnswers() {
     "Years of experience",
     "What is your CGPA?",
     "Country of residence",
+    "Are you currently serving notice period?",
+    "Disability percentage",
     "Email address",
     "Where are you currently located?",
     "LinkedIn profile URL",

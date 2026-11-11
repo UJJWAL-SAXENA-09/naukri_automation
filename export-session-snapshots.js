@@ -31,9 +31,17 @@ const targets = [
     url: 'https://wellfound.com/jobs',
   },
 ];
+const requestedTargets = process.argv.slice(2);
+const selectedTargets = requestedTargets.length
+  ? targets.filter((target) => requestedTargets.includes(target.name))
+  : targets;
+if (requestedTargets.length && selectedTargets.length !== new Set(requestedTargets).size) {
+  console.error('Usage: node export-session-snapshots.js [refresh|naukri|wellfound ...]');
+  process.exit(2);
+}
 
 (async () => {
-  for (const target of targets) {
+  for (const target of selectedTargets) {
     const context = await chromium.launchPersistentContext(
       path.join(__dirname, target.profile),
       browserLaunchOptions({
