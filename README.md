@@ -268,6 +268,33 @@ Enable-ScheduledTask WellfoundAutoApply      # resume
 Unregister-ScheduledTask WellfoundAutoApply  # remove
 ```
 
+## macOS scheduling (launchd)
+
+The unified repository includes native per-user LaunchAgents. They run only while
+the Mac is powered on and the user is logged in. Calendar events missed during sleep
+are coalesced into one run after wake. The job wrapper prevents idle sleep during an
+active run and serializes Naukri/Wellfound auto-apply so they cannot overlap.
+
+Default `Asia/Kolkata` schedule:
+
+- Naukri profile refresh: every hour at minute `05`
+- Naukri auto-apply: `09:20` and `15:20`
+- Wellfound auto-apply: `12:30`
+
+After completing all one-time logins and dry-run tests:
+
+```bash
+node deploy/setup-macos-schedule.js install
+node deploy/setup-macos-schedule.js status
+```
+
+Auto-apply remains dry-run while `AUTO_APPLY_LIVE=0` in the local `.env`. Logs are
+written under `runtime/logs/`. To remove all three schedules:
+
+```bash
+node deploy/setup-macos-schedule.js remove
+```
+
 ## Troubleshooting
 
 | Symptom | Fix |
