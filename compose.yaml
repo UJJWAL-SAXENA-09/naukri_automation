@@ -28,9 +28,9 @@ services:
     env_file: .env
     environment:
       TZ: Asia/Kolkata
-      SCHEDULE_TIMES: "${NAUKRI_AUTO_APPLY_TIMES:-09:20,15:20}"
+      SCHEDULE_TIMES: "${NAUKRI_AUTO_APPLY_TIMES:-00:00,02:00,11:00,13:00,15:00,18:00,20:00}"
       AUTO_APPLY_LIVE: "${AUTO_APPLY_LIVE:-0}"
-      SCHEDULER_LOCK_FILE: /state/auto-apply.lock
+      SCHEDULER_LOCK_FILE: /state/naukri-auto-apply.lock
       BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
       CONTAINERIZED_BROWSER: "1"
     volumes:
@@ -47,10 +47,9 @@ services:
     env_file: .env
     environment:
       TZ: Asia/Kolkata
-      # Matches the original Wellfound repository's documented daily time.
-      SCHEDULE_TIMES: "${WELLFOUND_AUTO_APPLY_TIMES:-12:30}"
+      SCHEDULE_TIMES: "${WELLFOUND_AUTO_APPLY_TIMES:-00:00,02:00,11:00,13:00,15:00,18:00,20:00}"
       AUTO_APPLY_LIVE: "${AUTO_APPLY_LIVE:-0}"
-      SCHEDULER_LOCK_FILE: /state/auto-apply.lock
+      SCHEDULER_LOCK_FILE: /state/wellfound-auto-apply.lock
       BROWSER_EXECUTABLE_PATH: /usr/bin/chromium
       CONTAINERIZED_BROWSER: "1"
     volumes:

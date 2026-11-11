@@ -13,11 +13,11 @@ case "$job" in
     command_args=(naukri-profile-refresh.js)
     ;;
   naukri)
-    lock_dir="$lock_root/auto-apply.lock"
+    lock_dir="$lock_root/naukri-auto-apply.lock"
     command_args=(auto-apply-runner.js naukri --scheduled)
     ;;
   wellfound)
-    lock_dir="$lock_root/auto-apply.lock"
+    lock_dir="$lock_root/wellfound-auto-apply.lock"
     command_args=(auto-apply-runner.js wellfound --scheduled)
     ;;
   *)

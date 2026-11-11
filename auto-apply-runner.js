@@ -40,13 +40,10 @@ const LOGIN_MODE = process.argv.includes('login');
 const LIVE = process.argv.includes('--live');
 const requestedMaxArg = process.argv.find((arg) => /^--max-applications=\d+$/.test(arg));
 const REQUESTED_MAX = requestedMaxArg ? Number(requestedMaxArg.split('=')[1]) : null;
-// --scheduled marks a run started by Task Scheduler rather than by hand. Such runs
-// wait a random 0-14 minutes before starting and refuse to run outside daytime hours,
-// because a burst of applications at exactly HH:00:00, around the clock, is the most
-// obviously non-human thing an hourly job can do.
+// --scheduled marks a run started by a scheduler rather than by hand. Such runs wait
+// a random 0-14 minutes before starting so applications do not always begin at the
+// exact same second.
 const SCHEDULED = process.argv.includes('--scheduled');
-const ACTIVE_FROM = 9;   // 09:00
-const ACTIVE_UNTIL = 23; // 23:00 (exclusive)
 // Window handling: hidden by default (off screen and out of the taskbar, so a run is
 // invisible), --minimize to keep it in the taskbar, --show to leave it on screen.
 // `node show-windows.js` brings a hidden window back.
@@ -213,11 +210,6 @@ function buildInjection() {
     return;
   }
   if (SCHEDULED && !LOGIN_MODE) {
-    const hour = new Date().getHours();
-    if (hour < ACTIVE_FROM || hour >= ACTIVE_UNTIL) {
-      log(`Outside active hours (${ACTIVE_FROM}:00-${ACTIVE_UNTIL}:00) — skipping this run.`);
-      return;
-    }
     const jitterMs = Math.floor(Math.random() * 14 * 60 * 1000);
     log(`Scheduled run: waiting ${Math.round(jitterMs / 60000)} min before starting.`);
     await new Promise((r) => setTimeout(r, jitterMs));

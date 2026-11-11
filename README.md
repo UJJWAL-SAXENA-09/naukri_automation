@@ -280,13 +280,17 @@ Unregister-ScheduledTask WellfoundAutoApply  # remove
 The unified repository includes native per-user LaunchAgents. They run only while
 the Mac is powered on and the user is logged in. Calendar events missed during sleep
 are coalesced into one run after wake. The job wrapper prevents idle sleep during an
-active run and serializes Naukri/Wellfound auto-apply so they cannot overlap.
+active run. Naukri and Wellfound use separate locks, so both can run at the same
+scheduled time while duplicate runs of the same site cannot overlap.
 
 Default `Asia/Kolkata` schedule:
 
 - Naukri profile refresh: every hour at minute `05`
-- Naukri auto-apply: `09:20` and `15:20`
-- Wellfound auto-apply: `12:30`
+- Naukri auto-apply: `00:00`, `02:00`, `11:00`, `13:00`, `15:00`, `18:00`, `20:00`
+- Wellfound auto-apply: `00:00`, `02:00`, `11:00`, `13:00`, `15:00`, `18:00`, `20:00`
+
+Scheduled auto-apply adds a random delay of up to 14 minutes after each trigger to
+avoid beginning at the exact same second every day.
 
 After completing all one-time logins and dry-run tests:
 

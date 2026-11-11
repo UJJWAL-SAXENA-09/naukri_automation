@@ -10,6 +10,8 @@ const wrapper = path.join(repo, "deploy", "run-macos-job.sh");
 const launchAgents = path.join(os.homedir(), "Library", "LaunchAgents");
 const logs = path.join(repo, "runtime", "logs");
 const domain = `gui/${process.getuid()}`;
+const autoApplySchedule = [0, 2, 11, 13, 15, 18, 20]
+  .map((Hour) => ({ Hour, Minute: 0 }));
 
 const jobs = [
   {
@@ -20,12 +22,12 @@ const jobs = [
   {
     name: "naukri",
     label: "com.ujjwal.naukri-auto-apply",
-    schedule: [{ Hour: 9, Minute: 20 }, { Hour: 15, Minute: 20 }],
+    schedule: autoApplySchedule,
   },
   {
     name: "wellfound",
     label: "com.ujjwal.wellfound-auto-apply",
-    schedule: [{ Hour: 12, Minute: 30 }],
+    schedule: autoApplySchedule,
   },
 ];
 
@@ -91,7 +93,7 @@ if (action === "install") {
     if (loaded.status !== 0) process.exit(loaded.status || 1);
     console.log(`installed ${job.label}`);
   }
-  console.log("Schedules installed. Auto-apply remains dry-run while AUTO_APPLY_LIVE=0.");
+  console.log("Schedules installed. Live/dry-run mode follows AUTO_APPLY_LIVE in the local .env.");
 } else if (action === "remove") {
   for (const job of jobs) {
     const file = plistPath(job);
