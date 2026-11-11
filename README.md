@@ -291,6 +291,7 @@ Default `Asia/Kolkata` schedule:
 
 Scheduled auto-apply adds a random delay of up to 14 minutes after each trigger to
 avoid beginning at the exact same second every day.
+Each site targets at most 10 submissions per run and 50 submissions per day.
 
 After completing all one-time logins and dry-run tests:
 

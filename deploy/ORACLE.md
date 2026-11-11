@@ -9,8 +9,8 @@ Default times use `Asia/Kolkata`:
 | Job | Default schedule |
 |---|---|
 | Naukri profile refresh | Every hour at minute `05` |
-| Naukri auto-apply | `09:20` and `15:20` daily |
-| Wellfound auto-apply | `12:30` daily (matching the source repository) |
+| Naukri auto-apply | `00:00`, `02:00`, `11:00`, `13:00`, `15:00`, `18:00`, `20:00` daily |
+| Wellfound auto-apply | `00:00`, `02:00`, `11:00`, `13:00`, `15:00`, `18:00`, `20:00` daily |
 
 Override the times in the server's private `.env` with
 `NAUKRI_REFRESH_MINUTE`, `NAUKRI_AUTO_APPLY_TIMES`, and
@@ -103,9 +103,9 @@ Dry runs fill forms but do not submit them. After reviewing their behavior, set
 docker compose --profile auto-apply up -d --force-recreate
 ```
 
-Both auto-apply services share `/state/auto-apply.lock`, so a long run from one site
-cannot overlap and corrupt the shared application CSV. Daily caps in the application
-runner still apply: 20 for Naukri and 50 for Wellfound.
+The auto-apply services use separate per-site locks, so both sites can run together
+while duplicate runs of the same site cannot overlap. Daily caps in the application
+runner still apply: 50 for Naukri and 50 for Wellfound.
 
 ## Operations
 

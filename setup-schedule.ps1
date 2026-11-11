@@ -25,10 +25,10 @@ $defs = @(
      Desc = "Hourly Naukri profile refresh (headline dot cycle + daily resume re-upload). Runs hidden." },
   @{ Name = "NaukriAutoApply"
      Args = "auto-apply-runner.js naukri --live --scheduled"
-     Desc = "Hourly Naukri auto-apply. 10 per run, 20/day cap, 09:00-23:00 only. Runs hidden." },
+     Desc = "Naukri auto-apply. 10 per run, 50/day cap. Runs hidden." },
   @{ Name = "WellfoundAutoApply"
      Args = "auto-apply-runner.js wellfound --live --scheduled"
-     Desc = "Hourly Wellfound auto-apply. 10 per run, 50/day cap, 09:00-23:00 only. Runs hidden." }
+     Desc = "Wellfound auto-apply. 10 per run, 50/day cap. Runs hidden." }
 )
 
 if ($Status) {

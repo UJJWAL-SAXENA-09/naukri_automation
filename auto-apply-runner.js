@@ -9,8 +9,8 @@
  *   node auto-apply-runner.js indeed --live     applies for real
  *   node auto-apply-runner.js wellfound [login|--live]
  *
- * Each run picks a random target of 10–25 applications (2 sites ≈ 20–50/day),
- * runs off-screen, and stops after the target or 100 minutes.
+ * Each run targets up to 10 applications, runs off-screen, and stops after the
+ * target or 100 minutes. Daily state caps each site at 50 applications.
  */
 const path = require('path');
 const fs = require('fs');
@@ -129,8 +129,8 @@ const SITES = {
     injectOn: (url) => /naukri\.com\/[^?]*-jobs/.test(url),
     submittedRe: /✅ applied|DRY_RUN — would click/,
     storeKey: 'autoApplyNaukri',
-    dailyCap: 20,
-    perRun: 10, // 10 per hourly run; the 20/day cap still decides when the day ends
+    dailyCap: 50,
+    perRun: 10, // 10 per scheduled run; the 50/day cap still decides when the day ends
     // ~85-90% of Naukri dev listings are "Apply on company site" — follow them
     // onto the employer's own form instead of skipping them.
     externalApply: true,
