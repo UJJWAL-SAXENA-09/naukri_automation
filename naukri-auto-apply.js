@@ -295,7 +295,18 @@
       return true;
     }
 
-    applyBtn.click();
+    // Naukri ignores a synthetic HTMLElement.click() on some current job pages.
+    // The Node runner exposes a Playwright-backed trusted click for those pages;
+    // keep the DOM fallback so this file remains usable when pasted manually.
+    if (typeof window.__nodeClickApply === 'function') {
+      const clicked = await window.__nodeClickApply(popup.location.href);
+      if (!clicked) {
+        log('  ⚠ trusted Apply click failed — not counting this job.');
+        return false;
+      }
+    } else {
+      applyBtn.click();
+    }
 
     // popup.document MUST be re-read on every check. Clicking Apply can navigate the
     // popup, and a navigation replaces the Document object — the old code captured it
@@ -314,7 +325,8 @@
     const confirmed = () => {
       const d = doc();
       if (!d || !d.body) return false;
-      return SELECTORS.appliedToast.test(d.body.textContent) ||
+      return /\/myapply\/saveApply/i.test(d.location.pathname) ||
+        SELECTORS.appliedToast.test(d.body.textContent) ||
         (applyBtn.isConnected && SELECTORS.alreadyAppliedText.test(applyBtn.textContent.trim()));
     };
 

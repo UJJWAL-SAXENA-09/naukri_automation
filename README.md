@@ -8,12 +8,19 @@ detail lives in `.env` — nothing is hard-coded in the scripts.
 | What | Entry point |
 |---|---|
 | Keep the Naukri profile "recently updated" (hourly) | `node naukri-profile-refresh.js` |
+| Auto-apply on Naukri and Wellfound sequentially | `npm run apply:all` |
 | Auto-apply on Naukri | `node auto-apply-runner.js naukri` |
 | Auto-apply on Wellfound | `node auto-apply-runner.js wellfound` |
 | Auto-apply on Indeed | `node auto-apply-runner.js indeed` |
 
 The apply runners start in **DRY RUN** mode — they fill everything but never press
 Send — so you can watch them work before adding `--live`.
+
+For the combined command, mode is read from the local `.env`: with
+`AUTO_APPLY_LIVE=1`, `npm run apply:all` submits real applications on Naukri first
+and Wellfound second. With `AUTO_APPLY_LIVE=0`, it is a dry run. Use
+`npm run apply:all -- --show` to keep Chrome visible and
+`npm run apply:all -- --max-applications=5` to cap each site for that run.
 
 ## Privacy and local credentials
 

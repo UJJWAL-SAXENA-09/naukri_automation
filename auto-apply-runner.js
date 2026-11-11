@@ -37,6 +37,8 @@ process.on('uncaughtException', (e) => console.log(`[${new Date().toLocaleString
 const SITE_ARG = process.argv[2];
 const LOGIN_MODE = process.argv.includes('login');
 const LIVE = process.argv.includes('--live');
+const requestedMaxArg = process.argv.find((arg) => /^--max-applications=\d+$/.test(arg));
+const REQUESTED_MAX = requestedMaxArg ? Number(requestedMaxArg.split('=')[1]) : null;
 // --scheduled marks a run started by Task Scheduler rather than by hand. Such runs
 // wait a random 0-14 minutes before starting and refuse to run outside daytime hours,
 // because a burst of applications at exactly HH:00:00, around the clock, is the most
@@ -124,6 +126,7 @@ const SITES = {
       'https://www.naukri.com/flutter-developer-jobs?experience=1',
     ],
     loginUrl: 'https://www.naukri.com/nlogin/login',
+    appliedListUrl: 'https://www.naukri.com/myapply/historypage',
     // inject only on search pages (…-jobs…), never into the job popup the script drives itself
     injectOn: (url) => /naukri\.com\/[^?]*-jobs/.test(url),
     submittedRe: /✅ applied|DRY_RUN — would click/,
@@ -151,7 +154,7 @@ let dayState = { date: todayKey, count: 0 };
 try { const s = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8').replace(/^﻿/, '')); if (s.date === todayKey) dayState = s; } catch (e) {}
 const bumpDayCount = () => { dayState.count++; try { fs.writeFileSync(STATE_FILE, JSON.stringify(dayState)); } catch (e) {} };
 // per-run target (site.perRun) capped by whatever is left of the daily allowance
-const TARGET = Math.min(site.perRun || DAILY_CAP, DAILY_CAP - dayState.count);
+const TARGET = Math.min(REQUESTED_MAX || site.perRun || DAILY_CAP, DAILY_CAP - dayState.count);
 const MAX_RUNTIME_MS = 100 * 60 * 1000;
 const MAX_RESTARTS = 8; // browser gets closed and reopened this many times before giving up
 const IDLE_ROTATE_MS = 4 * 60 * 1000;
@@ -334,10 +337,25 @@ function buildInjection() {
       await page.goto(site.appliedListUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
       // the list is client-rendered; wait for a row to exist rather than a fixed sleep
       await page.waitForFunction(
-        () => /Ongoing|Archived|No applications/i.test(document.body.innerText),
+        (siteName) => siteName === 'naukri'
+          ? /Job application status|Total applies|Application sent/i.test(document.body.innerText)
+          : /Ongoing|Archived|No applications/i.test(document.body.innerText),
+        SITE_ARG,
         { timeout: 30000 }
       ).catch(() => {});
       await page.waitForTimeout(2500);
+      if (SITE_ARG === 'naukri') {
+        const id = ((job.link || '').match(/-(\d{6,})(?:[/?]|$)/) || [])[1] || '';
+        const title = (job.title || '').trim();
+        return await page.evaluate(([id, title]) => {
+          const html = document.body.innerHTML;
+          const text = document.body.innerText;
+          if (!/Job application status|Total applies|Application sent/i.test(text)) return 'unknown';
+          if (id && html.includes(id)) return 'verified';
+          if (title.length > 3 && text.toLowerCase().includes(title.toLowerCase())) return 'verified';
+          return id || title ? 'missing' : 'unknown';
+        }, [id, title]);
+      }
       const id = ((job.link || '').match(/\/jobs\/(\d+)/) || [])[1] || '';
       const company = (job.company || '').trim();
       return await page.evaluate(([id, company]) => {
@@ -477,6 +495,33 @@ function buildInjection() {
   const ctx = await launch();
   await tuckAway(ctx);
 
+  // Current Naukri pages can ignore synthetic DOM clicks. Expose one narrowly
+  // scoped trusted-input operation to the injected script; success is still
+  // verified separately before an application is counted or logged.
+  if (SITE_ARG === 'naukri') {
+    await ctx.exposeBinding('__nodeClickApply', async ({ page: sourcePage }, jobUrl) => {
+      try {
+        const normalized = String(jobUrl || '').split('?')[0];
+        const popup = ctx.pages().find((p) => p !== sourcePage && p.url().split('?')[0] === normalized);
+        if (!popup) return false;
+        const buttons = popup.locator('button, [role="button"], #apply-button');
+        const count = await buttons.count();
+        for (let i = 0; i < count; i++) {
+          const button = buttons.nth(i);
+          const text = (await button.innerText().catch(() => '')).trim();
+          if (/^apply$/i.test(text) && await button.isVisible().catch(() => false)) {
+            await button.click({ timeout: 10000 });
+            return true;
+          }
+        }
+        return false;
+      } catch (e) {
+        log(`  trusted Apply click error: ${String(e.message || e).split('\n')[0].slice(0, 100)}`);
+        return false;
+      }
+    });
+  }
+
   // Seed the seen-list from the site's own applied list. The in-page list lives in
   // localStorage that wellfound's role/job pages do not share across navigations, and
   // Node's copy resets whenever the browser is reopened — so a restarted run walked
@@ -484,7 +529,7 @@ function buildInjection() {
   // job it applied to 20 minutes earlier). Those cost a full cycle each and produce
   // no application, which then trips the "3 fruitless cycles" restart, which resets
   // the list again. Seeding from the authoritative list breaks that loop.
-  if (site.appliedListUrl && !LOGIN_MODE) {
+  if (SITE_ARG === 'wellfound' && site.appliedListUrl && !LOGIN_MODE) {
     const before = seenJobs.size;
     const found = await collectAppliedSlugs(ctx);
     for (const slug of found) seenJobs.add(slug);
