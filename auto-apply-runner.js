@@ -269,10 +269,14 @@ function buildInjection() {
       if (fs.existsSync(SHOW_FLAG)) return; // user asked to see it
       await stow(dir).catch(() => {});
     };
-    await new Promise((r) => setTimeout(r, 1200)); // let the window actually exist
+    // Hide as soon as the native process exists, then sweep again after Chrome has
+    // finished creating its first window. This minimizes focus theft on macOS.
+    await new Promise((r) => setTimeout(r, 250));
+    await sweep();
+    await new Promise((r) => setTimeout(r, 750));
     await sweep();
     if (sweepTimer) clearInterval(sweepTimer);
-    sweepTimer = setInterval(() => { sweep(); }, 4000);
+    sweepTimer = setInterval(() => { sweep(); }, 2000);
     sweepTimer.unref?.();
     ctx.once('close', () => { if (sweepTimer) clearInterval(sweepTimer); });
   };

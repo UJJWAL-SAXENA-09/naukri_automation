@@ -121,8 +121,9 @@ async function manualLogin(page) {
       if (fs.existsSync(SHOW_FLAG)) return;
       stow(PROFILE_DIR).catch(() => {});
     };
-    setTimeout(sweep, 1200);
-    hideTimer = setInterval(sweep, 3000);
+    setTimeout(sweep, 250);
+    setTimeout(sweep, 1000);
+    hideTimer = setInterval(sweep, 2000);
     hideTimer.unref?.(); // never hold the process open on this alone
     ctx.once("close", () => clearInterval(hideTimer));
   }

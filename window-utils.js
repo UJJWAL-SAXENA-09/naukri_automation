@@ -15,7 +15,7 @@
  * A HIDDEN window cannot be clicked back — nothing appears in the taskbar.
  * `node show-windows.js` brings it back.
  *
- * Windows are enumerated with EnumWindows rather than Process.MainWindowHandle,
+ * On Windows, windows are enumerated with EnumWindows rather than Process.MainWindowHandle,
  * because a hidden window reports MainWindowHandle 0 — using it would have made
  * hiding a one-way trip with no way to restore.
  *
@@ -101,6 +101,7 @@ Write-Output $n
 `;
 
 function run(profileDir, mode) {
+  if (process.platform === "darwin") return runMac(profileDir, mode);
   if (process.platform !== "win32") return Promise.resolve(0);
   return new Promise((resolve) => {
     execFile(
@@ -109,6 +110,68 @@ function run(profileDir, mode) {
       { timeout: 20000, windowsHide: true },
       (err, stdout) =>
         resolve(err ? 0 : parseInt(String(stdout).trim(), 10) || 0),
+    );
+  });
+}
+
+// macOS treats each isolated --user-data-dir launch as its own Chrome process, but
+// AppleScript addresses applications by bundle id and would also hide the user's
+// personal Chrome. Resolve the exact process by command line, then target its PID.
+function macChromePid(profileDir) {
+  return new Promise((resolve) => {
+    execFile("/bin/ps", ["-axo", "pid=,command="], { timeout: 10000 }, (err, stdout) => {
+      if (err) return resolve(0);
+      const profileArg = `--user-data-dir=${profileDir}`;
+      const mainExecutable = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+      for (const line of String(stdout).split(/\r?\n/)) {
+        if (!line.includes(mainExecutable) || !line.includes(profileArg)) continue;
+        if (line.includes("Google Chrome Helper")) continue;
+        return resolve(parseInt(line.trim(), 10) || 0);
+      }
+      resolve(0);
+    });
+  });
+}
+
+const MAC_SCRIPT = `
+on run argv
+  set targetPid to (item 1 of argv) as integer
+  set targetMode to item 2 of argv
+  tell application "System Events"
+    set matches to every application process whose unix id is targetPid
+    if (count of matches) is 0 then return "0"
+    set targetProcess to item 1 of matches
+    if targetMode is "hide" then
+      set visible of targetProcess to false
+    else if targetMode is "minimize" then
+      repeat with targetWindow in windows of targetProcess
+        try
+          set value of attribute "AXMinimized" of targetWindow to true
+        end try
+      end repeat
+    else if targetMode is "restore" then
+      set visible of targetProcess to true
+      repeat with targetWindow in windows of targetProcess
+        try
+          set position of targetWindow to {60, 60}
+          set value of attribute "AXMinimized" of targetWindow to false
+        end try
+      end repeat
+      set frontmost of targetProcess to true
+    end if
+  end tell
+  return "1"
+end run`;
+
+async function runMac(profileDir, mode) {
+  const pid = await macChromePid(profileDir);
+  if (!pid) return 0;
+  return new Promise((resolve) => {
+    execFile(
+      "/usr/bin/osascript",
+      ["-e", MAC_SCRIPT, String(pid), mode],
+      { timeout: 10000 },
+      (err, stdout) => resolve(err ? 0 : parseInt(String(stdout).trim(), 10) || 0),
     );
   });
 }

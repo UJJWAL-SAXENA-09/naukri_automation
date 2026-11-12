@@ -283,6 +283,12 @@ are coalesced into one run after wake. The job wrapper prevents idle sleep durin
 active run. Naukri and Wellfound use separate locks, so both can run at the same
 scheduled time while duplicate runs of the same site cannot overlap.
 
+Scheduled runs keep both the display and system awake for the full job. Their
+isolated Chrome processes launch off-screen and are hidden by PID on macOS, so the
+user's normal Chrome and current work remain untouched. PID-owned locks are checked
+on every trigger and automatically removed when an interrupted owner no longer
+exists, preventing stale locks from blocking later schedules.
+
 Default `Asia/Kolkata` schedule:
 
 - Naukri profile refresh: every hour at minute `05`
