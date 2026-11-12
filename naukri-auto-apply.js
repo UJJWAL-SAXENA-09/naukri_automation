@@ -61,7 +61,7 @@
     ],
     // Skip jobs whose title contains any of these
     TITLE_BLOCKLIST: __CFG.JOB_FILTERS?.titleBlocklist?.length ? __CFG.JOB_FILTERS.titleBlocklist : [
-      'senior staff', 'principal', 'director', 'manager', 'lead', 'devops',
+      'senior', 'staff', 'sr.', 'principal', 'architect', 'director', 'manager', 'lead',
       'data engineer', 'qa', 'test', 'intern', 'designer', 'sales', 'marketing',
       '.net', 'c#', 'php', 'ruby', 'golang', 'ios', 'android native', 'flutter',
     ],
@@ -358,6 +358,14 @@
     if (typeof window.__nodeClickApply === 'function') {
       const clicked = await window.__nodeClickApply(popup.location.href);
       if (!clicked) {
+        // External jobs can first render a generic Apply button and replace it with
+        // "Apply on company site" a moment later. Re-check before treating this as
+        // a broken trusted click.
+        await sleep(2000);
+        if (findButtonByText(doc(), SELECTORS.externalApplyText)) {
+          log(`  🔗 EXTERNAL | ${job.title} | ${job.href}`);
+          return 'external';
+        }
         log('  ⚠ trusted Apply click failed — not counting this job.');
         return false;
       }
@@ -462,7 +470,8 @@
   }
 
   let extQueued = 0;
-  while (state.applied < CONFIG.MAX_APPLICATIONS) {
+  let appliedThisInjection = 0;
+  while (appliedThisInjection < CONFIG.MAX_APPLICATIONS) {
     const cards = [...document.querySelectorAll(SELECTORS.jobCards)].filter(visible);
     let job = null;
 
@@ -502,10 +511,13 @@
 
     const ok = await applyInPopup(popup, job);
     // Strictly true: 'external' is truthy and must not be counted as an application.
-    if (ok === true && !CONFIG.DRY_RUN) {
-      state.applied++;
-      saveState();
-      log(`  progress: ${state.applied}/${CONFIG.MAX_APPLICATIONS}`);
+    if (ok === true) {
+      appliedThisInjection++;
+      if (!CONFIG.DRY_RUN) {
+        state.applied++;
+        saveState();
+      }
+      log(`  progress this injection: ${appliedThisInjection}/${CONFIG.MAX_APPLICATIONS}`);
     }
     if (ok === 'external') {
       extQueued++;
@@ -526,5 +538,5 @@
   popup.close();
   log(CONFIG.DRY_RUN
     ? 'DRY RUN finished — nothing was actually sent. Set CONFIG.DRY_RUN = false and re-paste to apply for real.'
-    : `Finished. Applied to ${state.applied} jobs total. Clear localStorage["${STORE_KEY}"] to reset the counter.`);
+    : `Finished. Applied to ${appliedThisInjection} jobs this injection (${state.applied} internal Naukri jobs recorded today).`);
 })();

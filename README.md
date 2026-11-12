@@ -234,8 +234,11 @@ node auto-apply-runner.js wellfound --live
 ```
 
 Same flow, but Send is actually clicked. Each application is appended to
-`applications.csv` (Date, Site, Role, Company, Salary, Skills, Job Link, JD) and
-counted in `apply-state-wellfound.json` toward the daily cap.
+`applications.csv` (Date, Site, Role, Company, Salary, Skills, Job Link, Verified,
+JD) and counted in `apply-state-wellfound.json` toward the daily cap. Wellfound's
+Applied page can take roughly a minute to show a new submission, so the runner polls
+the exact job ID before setting `Verified`. At the next run it also reconciles older
+`missing`/`unknown` rows against the live Applied list.
 
 ## Customizing which jobs it applies to
 

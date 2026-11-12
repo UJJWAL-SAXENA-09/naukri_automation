@@ -43,7 +43,7 @@
     ],
     // Skip jobs whose title contains any of these
     TITLE_BLOCKLIST: __CFG.JOB_FILTERS?.titleBlocklist?.length ? __CFG.JOB_FILTERS.titleBlocklist : [
-      'senior', 'principal', 'director', 'manager', 'lead', 'devops',
+      'senior', 'staff', 'sr.', 'principal', 'architect', 'director', 'manager', 'lead', 'devops',
       'data engineer', 'qa', 'test', 'intern', 'designer', 'sales', 'marketing',
       'teacher', 'trainer', 'tutor', 'instructor', 'coach',
       '.net', 'c#', 'php', 'ruby', 'golang', 'ios', 'android native', 'flutter',
@@ -323,6 +323,21 @@ ${CV.name}`;
     return null;
   }
 
+  function hasAppliedStampFor(href) {
+    const id = ((href || '').match(/\/jobs\/(\d+)/) || [])[1];
+    const exactStamp = (root) => [...root.querySelectorAll('button, span, div')]
+      .some((e) => e.children.length === 0 && visible(e) && /^applied$/i.test(e.textContent.trim()));
+    if (id && new RegExp(`^/jobs/${id}(?:-|$)`).test(location.pathname)) return exactStamp(document);
+    const link = id && [...document.querySelectorAll('a[href*="/jobs/"]')]
+      .find((a) => new RegExp(`/jobs/${id}(?:-|$)`).test(a.getAttribute('href') || ''));
+    if (!link) return false;
+    let row = link.closest('div') || link.parentElement;
+    for (let i = 0; i < 6 && row; i++, row = row.parentElement) {
+      if (exactStamp(row)) return true;
+    }
+    return false;
+  }
+
   // ======================= APPLY TO ONE JOB (inside opened modal/pane) =======================
   async function fillAndSubmit(company, title, href) {
     // Opening the job card only shows the job pane — the apply form does not exist yet.
@@ -464,7 +479,13 @@ ${CV.name}`;
       if (/gender|^sex\b/i.test(groupCtx)) {
         pick = group.find((r) => { const l = labelTextOf(r); return /male/i.test(l) && !/female/i.test(l); });
       } else if (/disability|disabled/i.test(groupCtx)) {
-        pick = group.find((r) => /no disability|not disabled|^no\b|none/i.test(labelTextOf(r)));
+        const hasDisability = /yes|person with|hearing|hard of hearing/i.test(
+          `${CV.disabilityStatus || ''} ${CV.disabilityType || ''} ${CV.disabilityDetails || ''}`
+        );
+        pick = hasDisability
+          ? group.find((r) => /yes|person with|have a disability|disabled/i.test(labelTextOf(r)) &&
+              !/no disability|not disabled|prefer not|^no\b|none/i.test(labelTextOf(r)))
+          : group.find((r) => /prefer not|no disability|not disabled|^no\b|none/i.test(labelTextOf(r)));
       }
       pick = pick || group.find((r) => YES.test(labelTextOf(r))) || group[0];
       if (!pick.checked) pick.click();
@@ -521,8 +542,7 @@ ${CV.name}`;
     }
     // Extra (non-blocking) confirmation: the card usually flips to an "Applied" stamp.
     const stamped = await waitFor(
-      () => [...document.querySelectorAll('button, span, div')]
-        .some((e) => e.children.length === 0 && /^applied$/i.test(e.textContent.trim())),
+      () => hasAppliedStampFor(href),
       6000
     );
     log(`  ✅ application sent (dialog closed${stamped ? ', "Applied" stamp confirmed' : ', no stamp seen'})`);

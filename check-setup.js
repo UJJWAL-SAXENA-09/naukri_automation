@@ -250,6 +250,7 @@ function checkFiles() {
 async function checkSessions() {
   const { chromium } = require("playwright-core");
   const { sessionLooksAuthenticated } = require("./session-auth");
+  const { restoreSessionSnapshot } = require("./session-snapshot");
   const targets = [
     [
       "refresh",
@@ -296,6 +297,10 @@ async function checkSessions() {
       continue;
     }
     try {
+      // LaunchAgents restore owner-only snapshots because macOS background jobs
+      // cannot decrypt Chrome's login-keychain cookies. Check the same effective
+      // session the scheduler uses, not only the raw persistent profile.
+      await restoreSessionSnapshot(ctx, site).catch(() => {});
       const page = ctx.pages()[0] || (await ctx.newPage());
       const { hideBrowserWindows } = require("./window-utils");
       setTimeout(() => hideBrowserWindows(full).catch(() => {}), 1200);

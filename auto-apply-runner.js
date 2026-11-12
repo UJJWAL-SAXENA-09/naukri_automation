@@ -21,6 +21,7 @@ const { runManualBrowserLogin } = require('./manual-browser-login');
 const { CV, JOB_FILTERS, geminiKey, resumePath: RESUME_PATH } = require('./config'); // personal data from .env
 const { minimizeBrowserWindows, hideBrowserWindows, SHOW_FLAG } = require('./window-utils');
 const { applyExternal } = require('./external-apply'); // "Apply on company site" jobs, driven from Node
+const { reconcileWellfoundCsv } = require('./application-log');
 // stealth patches the fingerprint leaks reCAPTCHA uses to flag automation; falls back to plain playwright
 let chromium;
 try {
@@ -202,11 +203,15 @@ function logApplication(job) {
 // share localStorage with the /jobs feed across navigations (measured 2026-08-12 — the
 // stored list kept resetting to 1), so the script re-opened the same job every cycle.
 const seenJobs = new Set(); // /jobs/<id>-slug of every job already opened this run
-function buildInjection() {
+function buildInjection(remainingApplications) {
+  // Each injection gets only what is left in THIS runner invocation. Naukri also
+  // keeps a cumulative browser counter, which must not turn a later scheduled run
+  // into an immediate no-op once yesterday/earlier-today reached the same number.
+  const remaining = Math.max(0, remainingApplications);
   const raw = fs
     .readFileSync(path.join(__dirname, site.script), 'utf8')
     .replace(/DRY_RUN: true/, `DRY_RUN: ${!LIVE}`)
-    .replace(/MAX_APPLICATIONS: \d+/, `MAX_APPLICATIONS: ${TARGET}`);
+    .replace(/MAX_APPLICATIONS: \d+/, `MAX_APPLICATIONS: ${remaining}`);
   // the console script reads its personal data from window.__APPLY_CONFIG (from .env),
   // so no PII lives in the injected script itself
   return `(async () => {
@@ -293,6 +298,7 @@ function buildInjection() {
   const VERIFY_PAGES = new Set();
   const externalSeen = new Set();
   const extStats = { applied: 0, skipped: 0, failed: 0 };
+  const verificationTasks = new Set();
   let loginRequired = false;
 
   const isBusy = (p) => p.evaluate('!!window.__aaBusy').catch(() => false);
@@ -369,19 +375,31 @@ function buildInjection() {
       }
       const id = ((job.link || '').match(/\/jobs\/(\d+)/) || [])[1] || '';
       const company = (job.company || '').trim();
-      return await page.evaluate(([id, company]) => {
-        const html = document.body.innerHTML;
-        const text = document.body.innerText;
-        if (!/Ongoing|Archived|No applications/i.test(text)) return 'unknown'; // page never rendered
-        // The job id is the strongest signal; the company name is the fallback for
-        // rows that link by slug only.
-        if (id && html.includes(id)) return 'verified';
-        // Plain substring match: a company name is literal text, and building a
-        // regex from it only invited escaping bugs.
-        if (company.length > 2 && text.toLowerCase().includes(company.toLowerCase())) return 'verified';
-        if (!id && !company) return 'unknown'; // nothing to match on
-        return 'missing';
-      }, [id, company]);
+      // Wellfound's Applications list is eventually consistent. Live inspection
+      // found all 19 submissions present even though checks made ~10 seconds after
+      // Send said "missing". Poll the exact application-link job id for up to about
+      // a minute before declaring a real miss.
+      let lastResult = 'missing';
+      for (const delay of [0, 15000, 45000]) {
+        if (delay) {
+          await page.waitForTimeout(delay);
+          await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => {});
+          await page.waitForTimeout(2500);
+        }
+        const result = await page.evaluate(([id, company]) => {
+          const text = document.body.innerText;
+          if (!/Ongoing|Archived|No applications/i.test(text)) return 'unknown';
+          const rows = [...document.querySelectorAll('a[href*="/jobs/applications/"]')];
+          const ids = rows.map((a) => ((a.getAttribute('href') || '').match(/\/jobs\/applications\/\d+-(\d+)/) || [])[1]);
+          if (id && ids.includes(id)) return 'verified';
+          if (company.length > 2 && rows.some((a) => a.textContent.toLowerCase().includes(company.toLowerCase()))) return 'verified';
+          if (!id && !company) return 'unknown';
+          return 'missing';
+        }, [id, company]);
+        if (result === 'verified') return result;
+        lastResult = result;
+      }
+      return lastResult;
     } catch (e) {
       // Say why. A bare "unavailable" gave no way to tell a slow page from a tab that
       // had been closed out from under the check.
@@ -397,10 +415,26 @@ function buildInjection() {
   // injected each time — four instances raced, and the human-pace delay vanished.
   // One injection per 20s per run is plenty; the script itself loops internally.
   let lastInject = 0;
+  let readyForInjection = false;
   const inject = async (page) => {
     if (Date.now() - lastInject < 20000) return;
     lastInject = Date.now();
-    await page.evaluate(buildInjection()).catch(() => {}); // navigation mid-run is normal
+    await page.evaluate(buildInjection(TARGET - submitted)).catch(() => {}); // navigation mid-run is normal
+  };
+
+  const resetDailyPageState = async (page) => {
+    if (!site.storeKey) return;
+    await page.evaluate(([key, today]) => {
+      try {
+        const s = JSON.parse(localStorage.getItem(key) || '{}');
+        if (s.day !== today) {
+          s.day = today; s.submitted = 0; s.applied = 0;
+          s.seen = (s.seen || []).slice(-2000);
+          s.seenDry = (s.seenDry || []).slice(-2000);
+          localStorage.setItem(key, JSON.stringify(s));
+        }
+      } catch (e) {}
+    }, [site.storeKey, new Date().toDateString()]).catch(() => {});
   };
 
   function wire(page) {
@@ -467,13 +501,14 @@ function buildInjection() {
           const job = pendingJob || { title: 'unknown' };
           // Verify against the site's own applied-list before writing the CSV row, so
           // the CSV records what actually registered rather than what we hoped did.
-          verifyInAppliedList(job, page.context()).then((v) => {
+          const task = verifyInAppliedList(job, page.context()).then((v) => {
             job.verified = v;
             if (v === 'verified') log(`  ✔ verified — job is in ${SITE_ARG}'s applied list`);
             else if (v === 'missing') log(`  ❌ NOT in ${SITE_ARG}'s applied list — the submission did not register`);
             else log('  ? verification unavailable — CSV row marked unverified');
             try { logApplication(job); } catch (e) { log('CSV write failed: ' + e.message); }
-          });
+          }).finally(() => verificationTasks.delete(task));
+          verificationTasks.add(task);
         }
         pendingJob = null;
       }
@@ -481,21 +516,10 @@ function buildInjection() {
     page.on('load', async () => {
       if (VERIFY_PAGES.has(page)) return; // verification tab: same origin, must stay untouched
       if (!site.injectOn(page.url())) return;
+      if (!readyForInjection) return; // seed applied jobs before the first scan starts
       lastActivity = Date.now();
       // daily reset of the console script's submit counter (persists in localStorage)
-      if (site.storeKey) {
-        await page.evaluate(([key, today]) => {
-          try {
-            const s = JSON.parse(localStorage.getItem(key) || '{}');
-            if (s.day !== today) {
-              s.day = today; s.submitted = 0; s.applied = 0;
-              s.seen = (s.seen || []).slice(-2000);
-              s.seenDry = (s.seenDry || []).slice(-2000); // dry runs keep their own list
-              localStorage.setItem(key, JSON.stringify(s));
-            }
-          } catch (e) {}
-        }, [site.storeKey, new Date().toDateString()]).catch(() => {});
-      }
+      await resetDailyPageState(page);
       await inject(page);
     });
   }
@@ -516,9 +540,15 @@ function buildInjection() {
   if (SITE_ARG === 'naukri') {
     await ctx.exposeBinding('__nodeClickApply', async ({ page: sourcePage }, jobUrl) => {
       try {
-        const normalized = String(jobUrl || '').split('?')[0];
-        const popup = ctx.pages().find((p) => p !== sourcePage && p.url().split('?')[0] === normalized);
+        const normalized = String(jobUrl || '').split('?')[0].replace(/\/$/, '');
+        const jobId = ((normalized.match(/-(\d{6,})(?:\/|$)/) || [])[1] || '');
+        const popup = ctx.pages().find((p) => {
+          if (p === sourcePage) return false;
+          const current = p.url().split('?')[0].replace(/\/$/, '');
+          return current === normalized || (jobId && current.includes(jobId));
+        });
         if (!popup) return false;
+        await popup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
         const buttons = popup.locator('button, [role="button"], #apply-button');
         const count = await buttons.count();
         for (let i = 0; i < count; i++) {
@@ -569,7 +599,11 @@ function buildInjection() {
     const found = await collectAppliedSlugs(ctx);
     for (const slug of found) seenJobs.add(slug);
     if (seenJobs.size > before) log(`Seeded ${seenJobs.size - before} already-applied jobs from ${site.appliedListUrl}`);
+    const corrected = reconcileWellfoundCsv(CSV_FILE, found);
+    if (corrected) log(`Reconciled ${corrected} earlier CSV rows against Wellfound's live Applied list.`);
   }
+  readyForInjection = true;
+  await resetDailyPageState(mainPage);
   await inject(mainPage);
 
   // Supervisor: re-inject the search tab when idle, close finished form tabs,
@@ -638,6 +672,9 @@ function buildInjection() {
     }
   }
   } finally {
+    // The final submission can reach the target while its eventually-consistent
+    // applied-list check is still polling. Do not close that verification tab early.
+    if (verificationTasks.size) await Promise.allSettled([...verificationTasks]);
     if (sessionAuthenticated && process.env.BROWSER_SESSION_SNAPSHOT === '1' && (SITE_ARG === 'naukri' || SITE_ARG === 'wellfound')) {
       await saveSessionSnapshot(ctx, SITE_ARG).catch(() => {});
     }
