@@ -25,6 +25,25 @@ On Windows, use `copy .env.example .env` for the last step.
 
 Fill in `.env` with your profile details, resume path, and job filters. Keep credentials, resumes, and saved browser sessions on your own machine.
 
+## Configuration
+
+| Setting | Purpose |
+|---|---|
+| `RESUME_FILE` | Resume PDF path, either absolute or relative to the repository. |
+| `TARGET_TITLE_KEYWORDS` | Comma-separated job title keywords to include. |
+| `TITLE_BLOCKLIST` | Comma-separated title keywords to exclude. |
+| `AUTO_APPLY_LIVE` | Set to `0` for preview mode in combined and scheduled runs, or `1` to submit. |
+
+The direct site runner uses `--live` to enable submission; it does not read `AUTO_APPLY_LIVE`. Start with a preview and a small `--max-applications` value when changing filters.
+
+After filling in `.env` and adding your resume, check the configuration without opening Chrome:
+
+```bash
+node check-setup.js --quick
+```
+
+Resolve any failed checks before scheduling runs. The full `node check-setup.js` command also checks browser sessions; stop active runs before using it so they do not share a browser profile.
+
 ## Usage
 
 Sign in once using a visible browser:
