@@ -39,10 +39,10 @@ The direct site runner uses `--live` to enable submission; it does not read `AUT
 After filling in `.env` and adding your resume, check the configuration without opening Chrome:
 
 ```bash
-node check-setup.js --quick
+npm run check:quick
 ```
 
-Resolve any failed checks before scheduling runs. The full `node check-setup.js` command also checks browser sessions; stop active runs before using it so they do not share a browser profile.
+Resolve any failed checks before scheduling runs. Run `npm run check` for the full check, including browser sessions; stop active runs before using it so they do not share a browser profile. Both check commands only inspect the setup; they do not submit applications or refresh the profile.
 
 ## Usage
 
