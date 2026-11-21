@@ -89,4 +89,4 @@ Docker deployment instructions are in [deploy/ORACLE.md](deploy/ORACLE.md).
 
 ## Local files
 
-`.env`, browser profiles, resumes, logs, session snapshots, and application CSV files are excluded from Git. If a saved session expires, run the relevant login command again.
+`.env`, browser profiles, resumes, logs, session snapshots, and application CSV files are excluded from Git. If a saved session expires, run the relevant login command again
