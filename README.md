@@ -87,6 +87,16 @@ Scheduled application runs use `AUTO_APPLY_LIVE` from `.env`. Set it to `0` for 
 
 Docker deployment instructions are in [deploy/ORACLE.md](deploy/ORACLE.md).
 
+## Troubleshooting
+
+| Problem | What to check |
+|---|---|
+| Required details or resume are missing | Update `.env`, confirm `RESUME_FILE` points to an existing PDF, and rerun `npm run check:quick`. |
+| A Naukri or Wellfound scheduled session has expired | Repeat the relevant site login, then run `npm run session:export` to refresh the snapshots used by scheduled jobs. |
+| A browser profile is already in use | Stop the running job that owns that profile before starting another login or the full setup check. |
+
+Use `npm run check:quick` while a job is active; it skips browser-session checks. After logging in again, stop competing runs before exporting sessions or running `npm run check`.
+
 ## Local files
 
-`.env`, browser profiles, resumes, logs, session snapshots, and application CSV files are excluded from Git. If a saved session expires, run the relevant login command again
+`.env`, browser profiles, resumes, logs, session snapshots, and application CSV files are excluded from Git. If a saved session expires, run the relevant login command again.
