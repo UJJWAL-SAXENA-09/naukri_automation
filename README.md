@@ -73,6 +73,18 @@ To run Naukri and Wellfound together in preview mode:
 npm run apply:all -- --dry-run --show --max-applications=5
 ```
 
+### Choosing a run mode
+
+| Command | Mode |
+|---|---|
+| `node auto-apply-runner.js naukri` | Preview; add `--live` to submit. |
+| `npm run apply:naukri` | Live; the npm script already includes `--live`. |
+| `npm run apply:wellfound` | Live; the npm script already includes `--live`. |
+| `npm run apply:all` | Uses `AUTO_APPLY_LIVE` from the local `.env` file. |
+| `npm run apply:all -- --dry-run` | Explicit preview for both sites, overriding the combined runner's live setting. |
+
+Use the explicit preview command when checking a new profile or changing filters. The single-site npm shortcuts retain their live mode regardless of `AUTO_APPLY_LIVE`.
+
 ## Scheduling
 
 For macOS, export the saved sessions and install the schedules:
