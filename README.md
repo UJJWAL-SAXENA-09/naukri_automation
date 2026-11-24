@@ -78,12 +78,16 @@ npm run apply:all -- --dry-run --show --max-applications=5
 | Command | Mode |
 |---|---|
 | `node auto-apply-runner.js naukri` | Preview; add `--live` to submit. |
+| `npm run apply:naukri:preview` | Naukri preview; accepts runner flags after `--`. |
+| `npm run apply:wellfound:preview` | Wellfound preview; accepts runner flags after `--`. |
 | `npm run apply:naukri` | Live; the npm script already includes `--live`. |
 | `npm run apply:wellfound` | Live; the npm script already includes `--live`. |
 | `npm run apply:all` | Uses `AUTO_APPLY_LIVE` from the local `.env` file. |
 | `npm run apply:all -- --dry-run` | Explicit preview for both sites, overriding the combined runner's live setting. |
 
-Use the explicit preview command when checking a new profile or changing filters. The single-site npm shortcuts retain their live mode regardless of `AUTO_APPLY_LIVE`.
+Use the explicit preview command when checking a new profile or changing filters. The existing `apply:naukri` and `apply:wellfound` shortcuts retain their live mode regardless of `AUTO_APPLY_LIVE`.
+
+For a visible Naukri preview capped at five applications, use `npm run apply:naukri:preview -- --show --max-applications=5`. The existing `apply:naukri` and `apply:wellfound` shortcuts remain live; use their `:preview` counterparts to try changes without submitting.
 
 ## Scheduling
 

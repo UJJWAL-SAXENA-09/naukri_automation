@@ -10,7 +10,9 @@
     "session:export": "node export-session-snapshots.js",
     "apply:all": "node auto-apply-all.js",
     "apply:naukri": "node auto-apply-runner.js naukri --live",
-    "apply:wellfound": "node auto-apply-runner.js wellfound --live"
+    "apply:wellfound": "node auto-apply-runner.js wellfound --live",
+    "apply:naukri:preview": "node auto-apply-runner.js naukri",
+    "apply:wellfound:preview": "node auto-apply-runner.js wellfound"
   },
   "keywords": ["naukri", "playwright", "automation"],
   "author": "Ankit Baghel",
