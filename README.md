@@ -103,6 +103,16 @@ Scheduled application runs use `AUTO_APPLY_LIVE` from `.env`. Set it to `0` for 
 
 Docker deployment instructions are in [deploy/ORACLE.md](deploy/ORACLE.md).
 
+## Development checks
+
+Run the existing Node helper tests from the repository root:
+
+```bash
+npm test
+```
+
+These cover application logging, form helpers, session authentication, and external-application helpers. The external-application tests report when their optional Playwright browser pass is skipped; the pure helper checks still run.
+
 ## Troubleshooting
 
 | Problem | What to check |
